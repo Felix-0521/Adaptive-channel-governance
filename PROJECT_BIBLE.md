@@ -1,14 +1,16 @@
 # Adaptive Channel Governance & Partner Scoring Platform
-## Repository SSOT — v1.1.0
+## Repository SSOT — v1.2.0
 
 Status: **ACTIVE / AUTHORITATIVE FOR IMPLEMENTATION**  
 Updated: **2026-08-25**  
 Data policy: **Synthetic only**
 
 This repository-local SSOT records the implemented product decisions from the
-frozen v1.0 specification and the approved Policy Studio / Scenario /
-Recommended Action update. Code, configuration, UI, tests, and documentation
-must use the terminology and invariants below.
+frozen v1.0 specification and the approved Policy Studio, Scenario,
+Recommended Action, Management Insight, and Target Rationale updates. Code,
+configuration, UI, tests, and documentation must use the terminology and
+invariants below. The former term `Support Recommendation` is retired;
+`Recommended Action` is canonical in every layer.
 
 ## Product invariants
 
@@ -135,14 +137,88 @@ Actions must use Lifecycle, Business, Pillar Breakdown, Metric Breakdown, Risk,
 and Gate context. They must not be mapped directly from total Score. Critical
 Gate and High Risk actions take precedence over growth actions.
 
+## Management Insight
+
+Deterministic Management Insight is the authoritative, offline explanation
+layer. It reads Partner Context and the existing Evaluation Result; it never
+recalculates or mutates Score, Confidence, Tier, Risk, Gate, Governance Status,
+or Recommended Action. Its canonical output is:
+
+```text
+Severity: INFO | ATTENTION | WARNING | CRITICAL
+Executive Summary
+Key Drivers
+Management Attention
+Recommended Next Step
+Data Limitations
+```
+
+Driver ranking prioritizes Critical Gate, Critical Risk, High Risk, Low
+Confidence, material metric weakness, and normal observations. Metric drivers
+must expose observed value, configured benchmark/threshold, and weighted impact.
+Without historical observations the system may describe distance to the policy
+benchmark, but must not claim a change. Insufficient evidence uses the explicit
+statement `Insufficient evidence to determine the primary cause.`
+
+## Optional AI Insight and provider boundary
+
+Rules-based insight is the default. AI may only explain, summarize, compare,
+highlight, or rephrase supplied facts. It cannot calculate or change domain
+results, invent causes or policy, issue legal conclusions, or make final
+commercial decisions.
+
+Only a whitelist-based Structured Management Context may cross the provider
+boundary; raw DataFrames, uploaded CSV rows, and API keys must never be sent as
+context or persisted. `OPENAI_API_KEY` is environment-only. Missing
+configuration, dependency, timeout, provider, quota, network, or response
+validation errors must fall back to the deterministic insight without breaking
+Partner 360. The core application remains fully functional without AI.
+
+## Target Rationale
+
+Target Rationale is a decision-support sanity check for a user-supplied Proposed
+Target. It does not set, recommend, approve, or reject a sales target. Canonical
+assessments are:
+
+```text
+SUPPORTED
+STRETCH
+REVIEW_REQUIRED
+INSUFFICIENT_EVIDENCE
+```
+
+Inputs may include Current Revenue, Proposed Target, Historical Growth, Current
+Sell-out, Lifecycle Stage, Market Capability, Pipeline Value, New Customer Plan,
+Coverage, New Product Potential, Resource Commitment, and existing governance
+signals. Outputs include Proposed Target, Required Growth, Assessment,
+Confidence, Supporting Drivers, Constraining Drivers, Required Assumptions, and
+Management Review. Missing inputs reduce confidence.
+
+ENTRY, BUILD, and EMERGING contexts emphasize pipeline, first customers,
+capability, and footprint expansion rather than a low historical base. MATURE
+contexts emphasize historical growth, sell-out, productivity, inventory, and
+new-product evidence. DECLINE contexts apply greater caution to aggressive
+growth. High/Critical governance risk and gates constrain the rationale but do
+not create an approval workflow.
+
+The following policy thresholds are configurable and never hard-coded in UI:
+`pipeline_coverage_supported`, `pipeline_coverage_stretch`,
+`max_historical_growth_deviation`, and `minimum_target_confidence`.
+
+Tests must cover deterministic severity/driver/evidence behavior, AI provider
+failure and privacy boundaries, all four Target Assessment values, lifecycle
+sensitivity, governance constraints, missingness, Partner 360 startup, and the
+existing regression suite.
+
 ## Current MVP boundary
 
 Included: synthetic data, validation, adaptive Policy, two-level weights,
 Country Override, lifecycle/audit, scoring, confidence, Risk, Gate, Tier,
 Governance Status, Recommended Action, Executive Overview, Partner 360, Policy
-Studio, Scenario Lab, Data Quality, and tests.
+Studio, Scenario Lab, Data Quality, deterministic Management Insight, optional
+AI-enhanced explanation, Target Rationale, and tests.
 
 Deferred: real CRM/ERP integration, automatic commercial decisions,
-multi-user approvals, role permissions, persistent policy database, target
-rationale, external market data, and mandatory AI APIs.
-
+multi-user approvals, role permissions, persistent policy/audit database,
+external market data, mandatory AI APIs, RAG, machine learning, and automatic
+target approval.
