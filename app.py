@@ -14,6 +14,7 @@ import plotly.express as px
 import streamlit as st
 
 from channel_governance.evaluation import evaluate_partner, evaluate_portfolio
+from channel_governance.insight import generate_deterministic_insight
 from channel_governance.models import Pillar, ScenarioScope
 from channel_governance.policy import PolicyLifecycleManager
 from channel_governance.scenario import ScenarioService
@@ -87,7 +88,7 @@ def render_overview(results: pd.DataFrame) -> None:
     )
 
 
-def render_partner_360(partners, evaluations) -> None:
+def render_partner_360(partners, evaluations, policies) -> None:
     """Explain one evaluation from context through recommended human action."""
     labels = {
         item.partner_id: f"{item.partner_name} · {item.country_code} · {item.business_line}"
@@ -96,6 +97,8 @@ def render_partner_360(partners, evaluations) -> None:
     selected_id = st.selectbox("Partner", options=list(labels), format_func=labels.__getitem__)
     partner = next(item for item in partners if item.partner_id == selected_id)
     result = evaluations[selected_id]
+    policy = policies.resolve(partner)
+    insight = generate_deterministic_insight(partner, result, policy)
 
     st.caption(
         f"Policy {result.policy_id} · {partner.lifecycle_stage.value} · "
@@ -106,6 +109,23 @@ def render_partner_360(partners, evaluations) -> None:
     columns[1].metric("Confidence", f"{result.confidence:.0%}")
     columns[2].metric("Tier", result.tier.title())
     columns[3].metric("Governance status", result.governance_status.value.title())
+
+    st.subheader("Management Insight")
+    st.caption(f"Rules-based · Severity: {insight.severity.value}")
+    st.markdown("**Executive Summary**")
+    st.write(insight.executive_summary)
+    st.markdown("**Key Drivers**")
+    for driver in insight.key_drivers:
+        st.write(
+            f"• {driver.metric}: {driver.explanation} "
+            f"(Current: {driver.current_value}; Benchmark: {driver.benchmark}; Impact: {driver.impact})"
+        )
+    st.markdown("**Management Attention**")
+    st.write(insight.management_attention)
+    st.markdown("**Recommended Next Step**")
+    st.write(insight.recommended_next_step)
+    st.markdown("**Data Confidence**")
+    st.write(" ".join(insight.data_limitations))
 
     breakdown = pd.DataFrame(
         [
@@ -489,7 +509,7 @@ overview_tab, partner_tab, quality_tab, policy_tab, scenario_tab, audit_tab = st
 with overview_tab:
     render_overview(portfolio_results)
 with partner_tab:
-    render_partner_360(partner_records, evaluation_map)
+    render_partner_360(partner_records, evaluation_map, policy_repository)
 with quality_tab:
     render_data_quality(partner_records, evaluation_map)
 with policy_tab:

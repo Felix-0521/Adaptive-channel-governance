@@ -68,6 +68,19 @@ class ActionPriority(StrEnum):
     LOW = "LOW"
 
 
+class InsightSeverity(StrEnum):
+    INFO = "INFO"
+    ATTENTION = "ATTENTION"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+
+
+class DriverDirection(StrEnum):
+    NEGATIVE = "NEGATIVE"
+    POSITIVE = "POSITIVE"
+    GOVERNANCE = "GOVERNANCE"
+
+
 class RecommendedActionType(StrEnum):
     BRANDING_MDF = "BRANDING_MDF"
     ENGINEER_SUPPORT = "ENGINEER_SUPPORT"
@@ -224,3 +237,24 @@ class EvaluationResult(BaseModel):
     gate_codes: list[str]
     governance_status: GovernanceStatus
     recommended_actions: list[RecommendedAction]
+
+
+class InsightDriver(BaseModel):
+    rank: int = Field(ge=1)
+    category: str
+    direction: DriverDirection
+    metric: str
+    current_value: Any = None
+    benchmark: str
+    impact: float | None = None
+    explanation: str
+
+
+class ManagementInsight(BaseModel):
+    severity: InsightSeverity
+    executive_summary: str
+    key_drivers: list[InsightDriver]
+    management_attention: str
+    recommended_next_step: str
+    data_limitations: list[str]
+    source: str = "RULES_BASED"
