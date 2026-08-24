@@ -36,6 +36,10 @@ policies:
       ar_overdue_90d_high_pct: 20
       data_quality_low_pct: 60
       new_product_benchmark_pct: 20
+      pipeline_coverage_supported: 1.5
+      pipeline_coverage_stretch: 0.8
+      max_historical_growth_deviation: 20
+      minimum_target_confidence: 0.60
     tier_rules: &base_tiers {STRATEGIC: 90, CORE: 75, DEVELOPMENT: 60}
 
   - policy_id: POL-LIFECYCLE-EMERGING
@@ -136,4 +140,3 @@ policies:
       sell_out_performance_pct: {pillar: OPERATIONAL_HEALTH, method: linear, bad: 50, good: 110, weight: 0.45}
     thresholds: *base_thresholds
     tier_rules: {STRATEGIC: 88, CORE: 72, DEVELOPMENT: 58}
-

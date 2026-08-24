@@ -9,11 +9,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class LifecycleStage(StrEnum):
+    ENTRY = "ENTRY"
     BUILD = "BUILD"
     EMERGING = "EMERGING"
     GROWTH = "GROWTH"
     MATURE = "MATURE"
     MAINTENANCE = "MAINTENANCE"
+    DECLINE = "DECLINE"
 
 
 class PartnerType(StrEnum):
@@ -79,6 +81,13 @@ class DriverDirection(StrEnum):
     NEGATIVE = "NEGATIVE"
     POSITIVE = "POSITIVE"
     GOVERNANCE = "GOVERNANCE"
+
+
+class TargetAssessment(StrEnum):
+    SUPPORTED = "SUPPORTED"
+    STRETCH = "STRETCH"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
 
 
 class RecommendedActionType(StrEnum):
@@ -279,3 +288,36 @@ class StructuredManagementContext(BaseModel):
     key_positive_drivers: tuple[dict[str, Any], ...]
     recommended_actions: tuple[dict[str, Any], ...]
     deterministic_insight: dict[str, Any]
+
+
+class TargetRationaleInput(BaseModel):
+    current_revenue: float | None = Field(default=None, ge=0)
+    proposed_target: float | None = Field(default=None, gt=0)
+    historical_growth_pct: float | None = None
+    current_sell_out_pct: float | None = Field(default=None, ge=0)
+    lifecycle_stage: LifecycleStage
+    market_capability_score: float | None = Field(default=None, ge=0, le=100)
+    pipeline_value: float | None = Field(default=None, ge=0)
+    new_customer_plan: int | None = Field(default=None, ge=0)
+    coverage_pct: float | None = Field(default=None, ge=0, le=100)
+    new_product_potential_pct: float | None = Field(default=None, ge=0, le=100)
+    resource_commitment: bool | None = None
+    inventory_days: float | None = Field(default=None, ge=0)
+    ar_overdue_90d_pct: float | None = Field(default=None, ge=0, le=100)
+    risk_level: RiskSeverity = RiskSeverity.LOW
+    gate_codes: tuple[str, ...] = ()
+
+
+class TargetRationale(BaseModel):
+    proposed_target: float | None
+    required_growth_pct: float | None
+    historical_growth_reference_pct: float | None
+    pipeline_coverage_ratio: float | None
+    target_vs_current_revenue: float | None
+    target_vs_sell_out_trend_pct: float | None
+    assessment: TargetAssessment
+    confidence: float
+    supporting_drivers: list[str]
+    constraining_drivers: list[str]
+    required_assumptions: list[str]
+    management_review: str

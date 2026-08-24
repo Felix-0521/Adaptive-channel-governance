@@ -15,9 +15,10 @@ import streamlit as st
 
 from channel_governance.evaluation import evaluate_partner, evaluate_portfolio
 from channel_governance.insight_providers import OpenAIInsightProvider, generate_management_insight
-from channel_governance.models import Pillar, ScenarioScope
+from channel_governance.models import Pillar, RiskSeverity, ScenarioScope, TargetRationaleInput
 from channel_governance.policy import PolicyLifecycleManager
 from channel_governance.scenario import ScenarioService
+from channel_governance.target_rationale import assess_target
 from channel_governance.validation import require_valid_dataframe
 
 
@@ -138,6 +139,73 @@ def render_partner_360(partners, evaluations, policies) -> None:
     st.write(insight.recommended_next_step)
     st.markdown("**Data Confidence**")
     st.write(" ".join(insight.data_limitations))
+
+    with st.expander("Target Rationale", expanded=True):
+        st.caption(
+            "Decision-support sanity check only · The system does not set or approve sales targets."
+        )
+        target_columns = st.columns(4)
+        default_target = round((partner.annual_revenue or 0) * 1.10, 2) or None
+        proposed_target = target_columns[0].number_input(
+            "Proposed Target", min_value=0.01, value=default_target, step=10_000.0
+        )
+        pipeline_value = target_columns[1].number_input(
+            "Pipeline Value", min_value=0.0, value=None, step=10_000.0
+        )
+        new_customer_plan = target_columns[2].number_input(
+            "New Customer Plan", min_value=0, value=None, step=1
+        )
+        resource_label = target_columns[3].selectbox(
+            "Resource Commitment", ["Unknown", "Confirmed", "Not confirmed"]
+        )
+        severity_rank = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+        risk_level = max(
+            (risk.severity.value for risk in result.risks),
+            key=severity_rank.__getitem__,
+            default="LOW",
+        )
+        rationale = assess_target(
+            TargetRationaleInput(
+                current_revenue=partner.annual_revenue,
+                proposed_target=proposed_target,
+                historical_growth_pct=partner.yoy_growth_pct,
+                current_sell_out_pct=partner.sell_out_performance_pct,
+                lifecycle_stage=partner.lifecycle_stage,
+                market_capability_score=result.pillar_scores.get("MARKET_CAPABILITY"),
+                pipeline_value=pipeline_value,
+                new_customer_plan=new_customer_plan,
+                coverage_pct=partner.geographic_coverage_pct,
+                new_product_potential_pct=partner.new_product_contribution_pct,
+                resource_commitment={"Confirmed": True, "Not confirmed": False}.get(resource_label),
+                inventory_days=partner.inventory_days,
+                ar_overdue_90d_pct=partner.ar_overdue_90d_pct,
+                risk_level=RiskSeverity(risk_level),
+                gate_codes=tuple(result.gate_codes),
+            ),
+            policy,
+        )
+        metrics = st.columns(4)
+        metrics[0].metric("Proposed Target", f"{rationale.proposed_target:,.0f}" if rationale.proposed_target else "N/A")
+        metrics[1].metric("Required Growth", f"{rationale.required_growth_pct:+.1f}%" if rationale.required_growth_pct is not None else "N/A")
+        metrics[2].metric("Assessment", rationale.assessment.value.replace("_", " ").title())
+        metrics[3].metric("Confidence", f"{rationale.confidence:.0%}")
+        target_left, target_right = st.columns(2)
+        with target_left:
+            st.markdown("**Supporting Drivers**")
+            for item in rationale.supporting_drivers:
+                st.write(f"• {item}")
+            st.markdown("**Constraining Drivers**")
+            for item in rationale.constraining_drivers:
+                st.write(f"• {item}")
+        with target_right:
+            st.markdown("**Required Assumptions**")
+            if rationale.required_assumptions:
+                for item in rationale.required_assumptions:
+                    st.write(f"• {item}")
+            else:
+                st.write("No additional assumption was generated from the supplied evidence.")
+            st.markdown("**Management Review**")
+            st.write(rationale.management_review)
 
     breakdown = pd.DataFrame(
         [
