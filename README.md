@@ -1,7 +1,7 @@
 # Adaptive Channel Governance & Partner Scoring Platform
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-45%20passing-2E7D32)](tests/)
+[![Tests](https://img.shields.io/badge/tests-64%20passing-2E7D32)](tests/)
 [![Data](https://img.shields.io/badge/data-synthetic%20only-555555)](data/sample_partners.csv)
 
 An explainable, policy-driven decision-support MVP for global Sales Operations
@@ -35,6 +35,9 @@ flowchart LR
     F --> H
     G --> I[Recommended Action]
     H --> I
+    I --> J[Management Insight]
+    A --> K[Target Rationale]
+    H --> K
 ```
 
 ## Main functions
@@ -51,6 +54,9 @@ flowchart LR
 - Risk signals reported independently from overall partner quality
 - Critical gates capable of holding a high-scoring partner for human review
 - Partner tier, governance status, and structured Recommended Actions
+- Deterministic Management Insight with ranked, policy-grounded drivers
+- Optional AI-enhanced explanation with a structured-summary privacy boundary
+- Lifecycle-sensitive Target Rationale for proposed-target sanity checks
 - Single Partner, Selected Market, and Full Portfolio scenario comparison
 - Executive overview, Partner 360, Policy Studio, Scenario Lab, Data Quality,
   and Audit Log UI
@@ -86,6 +92,29 @@ python -m streamlit run app.py
 Open the local URL printed by Streamlit. No API key, database preparation,
 cloud account, or manual data download is required.
 
+## Management Insight
+
+Partner 360 explains the existing evaluation through an Executive Summary,
+ranked Key Drivers, Management Attention, the next already-generated
+Recommended Action, and explicit Data Limitations. Rules-based insight is the
+default and is fully offline.
+
+AI-enhanced wording is optional. Install `requirements-ai.txt`, copy
+`.env.example` values into your local environment, and set `OPENAI_API_KEY` to
+enable it. Only the whitelist-based Structured Management Context is sent to
+the provider; raw datasets and uploaded CSV rows are never sent. Provider or
+network failure automatically returns the deterministic explanation.
+
+## Target Rationale
+
+The system evaluates whether a proposed sales target is supported by observable
+business drivers. It does not automatically set or approve sales targets.
+Partner 360 shows Required Growth, the configured assessment, evidence
+confidence, supporting and constraining drivers, and required assumptions.
+ENTRY/BUILD/EMERGING evaluation emphasizes pipeline and market-building
+evidence; MATURE and DECLINE evaluation puts more weight on trend, capacity,
+and operating constraints.
+
 ## Architecture
 
 The Streamlit layer composes application services but contains no scoring,
@@ -103,6 +132,9 @@ src/channel_governance/
   governance.py                Risk, gates, tier, status, Recommended Action
   evaluation.py                Application orchestration service
   scenario.py                  Multi-scope baseline/draft comparison
+  insight.py                   Offline explanation and driver ranking
+  insight_providers.py         Optional provider boundary and safe fallback
+  target_rationale.py          Proposed-target evidence sanity check
   storage.py                   SQLite schema boundary
 tests/                         Unit and end-to-end tests
 docs/                          Data contract and verification evidence
@@ -115,12 +147,13 @@ AI_USAGE.md                    Truthful AI-assisted development record
 python -m pytest
 ```
 
-Current verified result: **45 tests passed**. Tests include a full Streamlit
+Current verified result: **64 tests passed**. Tests include a full Streamlit
 application execution check, two-level weight
 validation, score propagation, explicit fallback sources, Country Overrides,
 Draft/Active isolation, activation audit, three scenario scopes, tier
 migration, risk stability, structured Recommended Actions, missing data,
-critical gates, SQLite setup, and complete portfolio evaluation. See the
+critical gates, deterministic insight, provider fallback/privacy, all four
+target assessments, lifecycle sensitivity, SQLite setup, and complete portfolio evaluation. See the
 [adaptive policy workflow](docs/POLICY_WORKFLOW.md).
 
 ## AI-assisted development
@@ -136,9 +169,10 @@ approaches.
 - Stable now: data contract, adaptive policies, two-level weights, Country
   Overrides, lifecycle/audit, scoring, confidence, risk, gates, tiers,
   Recommended Actions, Executive Overview, Partner 360, Policy Studio,
-  Scenario Lab, Data Quality, and tests
-- Next: target rationale and persistent SQLite policy/audit storage
-- Later: optional deterministic or LLM-based management narrative
+  Scenario Lab, Data Quality, Management Insight, optional AI explanation,
+  Target Rationale, and tests
+- Next: persistent SQLite policy/audit storage
+- Later: multi-user workflow only if the product scope is explicitly expanded
 
 P0 stability and fresh-clone reproducibility take priority over optional
 features and artificial line-count expansion.
