@@ -5,12 +5,15 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .models import AuditRecord, MetricRule, PartnerRecord, Pillar, Policy, PolicyStatus
+
+if TYPE_CHECKING:
+    from .storage import SQLitePolicyStore
 
 
 EXACT_CONTEXT = frozenset(
@@ -150,15 +153,66 @@ class PolicyRepository:
 class PolicyLifecycleManager:
     """Mutable policy lifecycle isolated from dashboard resolution."""
 
-    def __init__(self, document: PolicyFile):
+    def __init__(self, document: PolicyFile, store: "SQLitePolicyStore | None" = None):
         self.document_version = document.version
         self.policies = [policy.model_copy(deep=True) for policy in document.policies]
         self.audit_records: list[AuditRecord] = []
+        self._store = store
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "PolicyLifecycleManager":
         with Path(path).open(encoding="utf-8") as handle:
             return cls(PolicyFile.model_validate(yaml.safe_load(handle)))
+
+    @classmethod
+    def from_yaml_and_sqlite(
+        cls, yaml_path: str | Path, database_path: str | Path
+    ) -> "PolicyLifecycleManager":
+        from .storage import SQLitePolicyStore
+
+        store = SQLitePolicyStore(database_path)
+        if store.has_policy_state():
+            version, policies, audits = store.load()
+            manager = cls(PolicyFile(version=version, policies=policies), store=store)
+            manager.audit_records = audits
+            return manager
+        with Path(yaml_path).open(encoding="utf-8") as handle:
+            manager = cls(PolicyFile.model_validate(yaml.safe_load(handle)), store=store)
+        manager._persist()
+        return manager
+
+    def _persist(self) -> None:
+        if self._store is not None:
+            self._store.save(self.document_version, self.policies, self.audit_records)
+
+    def _record_audit(
+        self,
+        *,
+        policy_id: str,
+        old_version: int | None,
+        new_version: int,
+        actor: str,
+        change_reason: str,
+        action: str,
+        old_value: dict,
+        new_value: dict,
+    ) -> AuditRecord:
+        audit = AuditRecord(
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            policy_id=policy_id,
+            old_version=old_version,
+            new_version=new_version,
+            actor=actor.strip(),
+            change_reason=change_reason.strip(),
+            action=action,
+            entity=f"POLICY:{policy_id}",
+            old_value=old_value,
+            new_value=new_value,
+            reason=change_reason.strip(),
+            version=new_version,
+        )
+        self.audit_records.append(audit)
+        return audit
 
     def active_repository(self) -> PolicyRepository:
         active = [policy.model_copy(deep=True) for policy in self.policies if policy.status == PolicyStatus.ACTIVE]
@@ -213,6 +267,17 @@ class PolicyLifecycleManager:
         if not actor.strip() or not change_reason.strip():
             raise ValueError("actor and change_reason are required to save a draft")
         self.policies.append(draft)
+        self._record_audit(
+            policy_id=target_id,
+            old_version=base_policy.version,
+            new_version=draft.version,
+            actor=actor,
+            change_reason=change_reason,
+            action="SAVE_DRAFT",
+            old_value={"version": base_policy.version, "status": base_policy.status.value},
+            new_value={"version": draft.version, "status": draft.status.value, "match": draft.match},
+        )
+        self._persist()
         return draft.model_copy(deep=True)
 
     def mark_scenario_tested(self, policy_id: str, version: int) -> Policy:
@@ -222,6 +287,17 @@ class PolicyLifecycleManager:
                     raise ValueError("only a draft can be scenario tested")
                 tested = policy.model_copy(update={"scenario_tested": True})
                 self.policies[index] = tested
+                self._record_audit(
+                    policy_id=policy_id,
+                    old_version=version,
+                    new_version=version,
+                    actor="System",
+                    change_reason="Scenario execution completed",
+                    action="SCENARIO_TESTED",
+                    old_value={"scenario_tested": False},
+                    new_value={"scenario_tested": True},
+                )
+                self._persist()
                 return tested.model_copy(deep=True)
         raise LookupError(f"draft {policy_id} v{version} does not exist")
 
@@ -269,14 +345,15 @@ class PolicyLifecycleManager:
         self.policies[target_index] = target.model_copy(
             update={"status": PolicyStatus.ACTIVE, "source_label": "", "selection_level": ""}
         )
-        audit = AuditRecord(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+        audit = self._record_audit(
             policy_id=policy_id,
             old_version=old_version,
             new_version=version,
-            actor=actor.strip(),
-            change_reason=change_reason.strip(),
+            actor=actor,
+            change_reason=change_reason,
+            action="ACTIVATE",
+            old_value={"version": old_version, "status": PolicyStatus.ACTIVE.value},
+            new_value={"version": version, "status": PolicyStatus.ACTIVE.value},
         )
-        self.audit_records.append(audit)
+        self._persist()
         return audit
-

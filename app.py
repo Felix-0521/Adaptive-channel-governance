@@ -24,6 +24,7 @@ from channel_governance.validation import require_valid_dataframe
 
 POLICY_PATH = ROOT / "config" / "scoring_rules.yaml"
 DATA_PATH = ROOT / "data" / "sample_partners.csv"
+DATABASE_PATH = ROOT / "data" / "app.db"
 
 
 @st.cache_data
@@ -550,9 +551,9 @@ def render_scenario_lab(
 
 
 def render_audit_log(manager: PolicyLifecycleManager) -> None:
-    st.subheader("Policy Activation Audit Log")
+    st.subheader("Persistent Policy Audit Log")
     if not manager.audit_records:
-        st.info("No policy has been activated in this session.")
+        st.info("No policy lifecycle event has been recorded yet.")
         return
     st.dataframe(
         pd.DataFrame([record.model_dump() for record in manager.audit_records]),
@@ -566,7 +567,9 @@ st.title("Adaptive Channel Governance")
 st.caption("Synthetic data · deterministic rules · explainable human decision support")
 
 if "policy_manager" not in st.session_state:
-    st.session_state["policy_manager"] = PolicyLifecycleManager.from_yaml(POLICY_PATH)
+    st.session_state["policy_manager"] = PolicyLifecycleManager.from_yaml_and_sqlite(
+        POLICY_PATH, DATABASE_PATH
+    )
 policy_manager: PolicyLifecycleManager = st.session_state["policy_manager"]
 policy_repository = policy_manager.active_repository()
 source_frame = load_demo_data()

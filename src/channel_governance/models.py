@@ -182,6 +182,12 @@ class AuditRecord(BaseModel):
     new_version: int
     actor: str
     change_reason: str
+    action: str = "ACTIVATE"
+    entity: str = "POLICY"
+    old_value: dict[str, Any] = Field(default_factory=dict)
+    new_value: dict[str, Any] = Field(default_factory=dict)
+    reason: str = ""
+    version: int | None = None
 
 
 class RecommendedAction(BaseModel):
