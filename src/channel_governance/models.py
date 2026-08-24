@@ -269,6 +269,17 @@ class ManagementInsight(BaseModel):
     source: str = "RULES_BASED"
 
 
+class AIInsightNarrative(BaseModel):
+    """AI-editable prose only; severity and ranked evidence stay deterministic."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    executive_summary: str
+    management_attention: str
+    recommended_next_step: str
+    data_limitations: list[str]
+
+
 class StructuredManagementContext(BaseModel):
     """Explicit provider whitelist; domain objects and raw rows cannot cross this boundary."""
 

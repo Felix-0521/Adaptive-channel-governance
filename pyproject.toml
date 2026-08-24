@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<9"]
+ai = ["openai>=1.40,<3"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -25,4 +26,3 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q"
-

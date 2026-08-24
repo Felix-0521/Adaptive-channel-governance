@@ -9,6 +9,7 @@ from typing import Protocol
 
 from .insight import generate_deterministic_insight
 from .models import (
+    AIInsightNarrative,
     DriverDirection,
     EvaluationResult,
     ManagementInsight,
@@ -121,9 +122,15 @@ class OpenAIInsightProvider:
                     "type": "json_schema",
                     "name": "management_insight",
                     "strict": True,
-                    "schema": ManagementInsight.model_json_schema(),
+                    "schema": AIInsightNarrative.model_json_schema(),
                 }
             },
         )
-        payload = json.loads(response.output_text)
-        return ManagementInsight.model_validate(payload)
+        narrative = AIInsightNarrative.model_validate(json.loads(response.output_text))
+        deterministic = ManagementInsight.model_validate(context.deterministic_insight)
+        return deterministic.model_copy(
+            update={
+                **narrative.model_dump(),
+                "source": "AI_ENHANCED",
+            }
+        )

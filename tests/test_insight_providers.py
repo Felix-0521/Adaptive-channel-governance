@@ -1,10 +1,13 @@
 from channel_governance.evaluation import evaluate_partner
 from channel_governance.insight import generate_deterministic_insight
 from channel_governance.insight_providers import (
+    OpenAIInsightProvider,
     build_management_context,
     generate_management_insight,
 )
 from channel_governance.models import PartnerRecord
+import json
+from types import SimpleNamespace
 
 
 def partner() -> PartnerRecord:
@@ -85,3 +88,35 @@ def test_raw_dataset_is_not_passed_to_provider(policies) -> None:
     assert "raw_dataset" not in keys and "dataframe" not in keys and "csv" not in keys
     assert "annual_revenue" not in keys
     assert keys == set(type(context).model_fields)
+
+
+def test_openai_adapter_mock_can_only_replace_narrative(policies) -> None:
+    record = partner()
+    result, policy, fallback = setup(record, policies)
+
+    class Responses:
+        def __init__(self):
+            self.request = None
+
+        def create(self, **kwargs):
+            self.request = kwargs
+            return SimpleNamespace(output_text=json.dumps({
+                "executive_summary": "Fact-bound summary.",
+                "management_attention": "Review supplied evidence.",
+                "recommended_next_step": "Use the existing action.",
+                "data_limitations": ["Uncertainty remains."],
+            }))
+
+    responses = Responses()
+    provider = OpenAIInsightProvider(
+        api_key="synthetic-test-key",
+        model="synthetic-test-model",
+        client=SimpleNamespace(responses=responses),
+    )
+    enhanced = generate_management_insight(record, result, policy, provider)
+    assert enhanced.executive_summary == "Fact-bound summary."
+    assert enhanced.severity == fallback.severity
+    assert enhanced.key_drivers == fallback.key_drivers
+    assert "annual_revenue" not in responses.request["input"]
+    schema = responses.request["text"]["format"]["schema"]
+    assert set(schema["required"]) == set(schema["properties"])
