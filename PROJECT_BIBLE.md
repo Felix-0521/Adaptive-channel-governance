@@ -1,5 +1,5 @@
 # Adaptive Channel Governance & Partner Scoring Platform
-## Repository SSOT — v1.2.0
+## Repository SSOT — v1.3.0
 
 Status: **ACTIVE / AUTHORITATIVE FOR IMPLEMENTATION**  
 Updated: **2026-08-25**  
@@ -219,6 +219,18 @@ Studio, Scenario Lab, Data Quality, deterministic Management Insight, optional
 AI-enhanced explanation, Target Rationale, and tests.
 
 Deferred: real CRM/ERP integration, automatic commercial decisions,
-multi-user approvals, role permissions, persistent policy/audit database,
-external market data, mandatory AI APIs, RAG, machine learning, and automatic
-target approval.
+multi-user approvals, role permissions, external market data, mandatory AI
+APIs, RAG, machine learning, and automatic target approval.
+
+## SQLite persistence boundary
+
+The local prototype persists Policy snapshots and lifecycle Audit History in
+`data/app.db`, which is created automatically and excluded from Git. The YAML
+Policy file remains the first-run seed. Stored Policy state includes version,
+status, Country Override, Pillar/Metric weights, Scenario Tested, and activation
+state. Stored Audit fields include timestamp, actor, action, entity, old/new
+values, reason, and version. Draft save, scenario test, and activation are
+transactionally persisted and survive application restart.
+
+SQLite remains a local single-user prototype boundary. It does not add
+authentication, role permissions, approval workflow, or production deployment.
