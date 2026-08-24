@@ -56,6 +56,12 @@ class PolicyStatus(StrEnum):
     ARCHIVED = "ARCHIVED"
 
 
+class ScenarioScope(StrEnum):
+    SINGLE_PARTNER = "SINGLE_PARTNER"
+    SELECTED_MARKET = "SELECTED_MARKET"
+    FULL_PORTFOLIO = "FULL_PORTFOLIO"
+
+
 class PartnerRecord(BaseModel):
     """Synthetic partner observation. Optional metrics preserve missingness."""
 
@@ -131,6 +137,39 @@ class AuditRecord(BaseModel):
     new_version: int
     actor: str
     change_reason: str
+
+
+class ScenarioComparison(BaseModel):
+    partner_id: str
+    partner_name: str
+    baseline_score: float | None
+    scenario_score: float | None
+    score_change: float | None
+    baseline_tier: str
+    scenario_tier: str
+    baseline_risk: str
+    scenario_risk: str
+    baseline_governance_status: str
+    scenario_governance_status: str
+
+
+class ScenarioSummary(BaseModel):
+    average_score_change: float
+    partners_upgraded: int
+    partners_downgraded: int
+    tier_migration: dict[str, int]
+    largest_positive_impact: dict[str, float | str] | None
+    largest_negative_impact: dict[str, float | str] | None
+    tier_counts_before: dict[str, int]
+    tier_counts_after: dict[str, int]
+
+
+class ScenarioReport(BaseModel):
+    scope: ScenarioScope
+    draft_policy_id: str
+    draft_version: int
+    comparisons: list[ScenarioComparison]
+    summary: ScenarioSummary
 
 
 class RiskFlag(BaseModel):

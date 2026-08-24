@@ -7,8 +7,9 @@ import plotly.express as px
 import streamlit as st
 
 from channel_governance.evaluation import evaluate_partner, evaluate_portfolio
-from channel_governance.models import Pillar
+from channel_governance.models import Pillar, ScenarioScope
 from channel_governance.policy import PolicyLifecycleManager
+from channel_governance.scenario import ScenarioService
 from channel_governance.validation import require_valid_dataframe
 
 
@@ -323,6 +324,131 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
         )
 
 
+def render_scenario_lab(
+    manager: PolicyLifecycleManager,
+    source_frame: pd.DataFrame,
+    partners,
+) -> None:
+    """Compare an isolated draft with active policy across three scopes."""
+    st.subheader("Scenario Lab")
+    st.caption("Baseline = Current Active Policy · Scenario = Draft Policy · Active data is read-only")
+    drafts = manager.drafts()
+    if not drafts:
+        st.warning("Create a Draft in Policy Studio before running a scenario.")
+        return
+
+    draft_refs = [(draft.policy_id, draft.version) for draft in drafts]
+    preferred = st.session_state.get("scenario_draft")
+    default_index = draft_refs.index(preferred) if preferred in draft_refs else len(draft_refs) - 1
+    selected_ref = st.selectbox(
+        "Draft Policy",
+        draft_refs,
+        index=default_index,
+        format_func=lambda ref: f"{ref[0]} v{ref[1]}",
+    )
+    scope = ScenarioScope(
+        st.radio(
+            "Scope",
+            [item.value for item in ScenarioScope],
+            format_func=lambda value: value.replace("_", " ").title(),
+            horizontal=True,
+        )
+    )
+
+    partner_id = None
+    filters: dict[str, str] = {}
+    if scope == ScenarioScope.SINGLE_PARTNER:
+        labels = {partner.partner_id: f"{partner.partner_name} · {partner.country_code}" for partner in partners}
+        partner_id = st.selectbox("Partner", list(labels), format_func=labels.__getitem__)
+    elif scope == ScenarioScope.SELECTED_MARKET:
+        columns = st.columns(4)
+        filter_options = {
+            "country_code": sorted({partner.country_code for partner in partners}),
+            "business_line": sorted({partner.business_line for partner in partners}),
+            "market_tier": sorted({partner.market_tier.value for partner in partners}),
+            "lifecycle_stage": sorted({partner.lifecycle_stage.value for partner in partners}),
+        }
+        for column, (field, options) in zip(columns, filter_options.items()):
+            selected = column.selectbox(field.replace("_", " ").title(), ["All", *options])
+            if selected != "All":
+                filters[field] = selected
+
+    if st.button("Run Scenario", type="primary"):
+        try:
+            report = ScenarioService.run(
+                source_frame,
+                manager,
+                draft_policy_id=selected_ref[0],
+                draft_version=selected_ref[1],
+                scope=scope,
+                partner_id=partner_id,
+                filters=filters,
+            )
+        except ValueError as error:
+            st.error(str(error))
+            return
+        manager.mark_scenario_tested(*selected_ref)
+        st.session_state["scenario_report"] = report
+        st.session_state["selected_draft"] = selected_ref
+        st.success("Scenario completed. Active Policy and official partner results were not modified.")
+
+    report = st.session_state.get("scenario_report")
+    if report is None or (report.draft_policy_id, report.draft_version) != selected_ref:
+        return
+    summary = report.summary
+    metrics = st.columns(5)
+    metrics[0].metric("Average Score Change", f"{summary.average_score_change:+.2f}")
+    metrics[1].metric("Partners Upgraded", summary.partners_upgraded)
+    metrics[2].metric("Partners Downgraded", summary.partners_downgraded)
+    positive = summary.largest_positive_impact
+    negative = summary.largest_negative_impact
+    metrics[3].metric(
+        "Largest Positive",
+        f"{positive['partner_id']} {positive['score_change']:+.2f}" if positive else "N/A",
+    )
+    metrics[4].metric(
+        "Largest Negative",
+        f"{negative['partner_id']} {negative['score_change']:+.2f}" if negative else "N/A",
+    )
+
+    comparisons = pd.DataFrame([item.model_dump() for item in report.comparisons])
+    st.dataframe(comparisons, use_container_width=True, hide_index=True)
+    tier_mix = pd.DataFrame(
+        [
+            {
+                "tier": tier,
+                "Baseline": summary.tier_counts_before[tier],
+                "Scenario": summary.tier_counts_after[tier],
+            }
+            for tier in summary.tier_counts_before
+        ]
+    ).melt(id_vars="tier", var_name="policy", value_name="partners")
+    tier_chart = px.bar(
+        tier_mix,
+        x="tier",
+        y="partners",
+        color="policy",
+        barmode="group",
+        title="Tier count before / after",
+        text_auto=True,
+    )
+    st.plotly_chart(tier_chart, use_container_width=True)
+    if summary.tier_migration:
+        st.write("Tier Migration", summary.tier_migration)
+
+
+def render_audit_log(manager: PolicyLifecycleManager) -> None:
+    st.subheader("Policy Activation Audit Log")
+    if not manager.audit_records:
+        st.info("No policy has been activated in this session.")
+        return
+    st.dataframe(
+        pd.DataFrame([record.model_dump() for record in manager.audit_records]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 st.set_page_config(page_title="Adaptive Channel Governance", page_icon="◈", layout="wide")
 st.title("Adaptive Channel Governance")
 st.caption("Synthetic data · deterministic rules · explainable human decision support")
@@ -338,8 +464,15 @@ evaluation_map = {
     partner.partner_id: evaluate_partner(partner, policy_repository) for partner in partner_records
 }
 
-overview_tab, partner_tab, quality_tab, policy_tab = st.tabs(
-    ["Executive overview", "Partner 360", "Data quality", "Policy Studio"]
+overview_tab, partner_tab, quality_tab, policy_tab, scenario_tab, audit_tab = st.tabs(
+    [
+        "Executive overview",
+        "Partner 360",
+        "Data quality",
+        "Policy Studio",
+        "Scenario Lab",
+        "Audit Log",
+    ]
 )
 with overview_tab:
     render_overview(portfolio_results)
@@ -349,3 +482,7 @@ with quality_tab:
     render_data_quality(partner_records, evaluation_map)
 with policy_tab:
     render_policy_studio(policy_manager, partner_records)
+with scenario_tab:
+    render_scenario_lab(policy_manager, source_frame, partner_records)
+with audit_tab:
+    render_audit_log(policy_manager)
