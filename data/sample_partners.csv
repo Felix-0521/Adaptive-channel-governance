@@ -1,0 +1,14 @@
+partner_id,partner_name,business_line,country_code,lifecycle_stage,partner_type,annual_revenue,target_achievement_pct,yoy_growth_pct,active_dealers,geographic_coverage_pct,inventory_days,forecast_accuracy_pct,payment_on_time_pct,ar_overdue_90d_pct,certified_engineers,training_completion_pct,demo_capability,data_reporting_quality_pct,pricing_violations,unauthorized_sales_incidents,sanctions_match,material_contract_breach
+P-001,Partner Atlas,AGRICULTURE,PL,GROWTH,DISTRIBUTOR,1250000,108,24,28,84,68,88,97,2,5,92,true,98,0,0,false,false
+P-002,Partner Birch,AGRICULTURE,PL,GROWTH,DISTRIBUTOR,730000,82,11,16,62,128,66,88,9,2,70,true,82,0,0,false,false
+P-003,Partner Cedar,GEOSPATIAL,DE,MATURE,DISTRIBUTOR,1680000,104,8,22,76,74,91,96,1,6,94,true,99,0,0,false,false
+P-004,Partner Delta,CONSTRUCTION,FR,EMERGING,DISTRIBUTOR,310000,76,34,9,48,42,58,91,4,1,64,true,76,0,0,false,false
+P-005,Partner Ember,LANDSCAPING,ES,GROWTH,DEALER,445000,95,19,12,69,52,79,93,3,3,81,true,89,0,0,false,false
+P-006,Partner Fjord,FACILITY_SERVICES,NL,MATURE,DISTRIBUTOR,980000,101,6,18,72,96,85,89,23,4,86,true,91,0,0,false,false
+P-007,Partner Grove,AGRICULTURE,CZ,MAINTENANCE,DISTRIBUTOR,610000,67,-12,11,55,174,43,72,28,1,48,false,54,1,0,false,false
+P-008,Partner Harbor,GEOSPATIAL,IT,EMERGING,DEALER,190000,88,41,6,36,31,61,95,0,2,73,true,93,0,0,false,false
+P-009,Partner Ion,CONSTRUCTION,GB,MATURE,DISTRIBUTOR,1450000,112,14,25,81,83,92,98,0,7,97,true,100,0,1,false,false
+P-010,Partner Juniper,LANDSCAPING,SE,GROWTH,DISTRIBUTOR,520000,91,22,14,65,63,77,90,7,2,78,true,87,0,0,false,false
+P-011,Partner Kite,AGRICULTURE,RO,EMERGING,DISTRIBUTOR,155000,71,37,4,28,22,49,84,12,0,35,false,46,2,0,false,false
+P-012,Partner Lumen,GEOSPATIAL,BE,MATURE,DISTRIBUTOR,1120000,99,5,19,79,71,89,97,1,5,91,true,97,0,0,true,false
+

@@ -1,0 +1,111 @@
+"""Canonical input and output contracts."""
+
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class LifecycleStage(StrEnum):
+    EMERGING = "EMERGING"
+    GROWTH = "GROWTH"
+    MATURE = "MATURE"
+    MAINTENANCE = "MAINTENANCE"
+
+
+class PartnerType(StrEnum):
+    DISTRIBUTOR = "DISTRIBUTOR"
+    DEALER = "DEALER"
+
+
+class RiskSeverity(StrEnum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class GovernanceStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    MONITOR = "MONITOR"
+    REVIEW = "REVIEW"
+    HOLD = "HOLD"
+
+
+class PartnerRecord(BaseModel):
+    """Synthetic partner observation. Optional metrics preserve missingness."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    partner_id: str = Field(min_length=1)
+    partner_name: str = Field(min_length=1)
+    business_line: str = Field(min_length=1)
+    country_code: str = Field(min_length=2, max_length=2)
+    lifecycle_stage: LifecycleStage
+    partner_type: PartnerType
+    annual_revenue: float | None = Field(default=None, ge=0)
+    target_achievement_pct: float | None = Field(default=None, ge=0, le=300)
+    yoy_growth_pct: float | None = Field(default=None, ge=-100, le=500)
+    active_dealers: int | None = Field(default=None, ge=0)
+    geographic_coverage_pct: float | None = Field(default=None, ge=0, le=100)
+    inventory_days: float | None = Field(default=None, ge=0, le=730)
+    forecast_accuracy_pct: float | None = Field(default=None, ge=0, le=100)
+    payment_on_time_pct: float | None = Field(default=None, ge=0, le=100)
+    ar_overdue_90d_pct: float | None = Field(default=None, ge=0, le=100)
+    certified_engineers: int | None = Field(default=None, ge=0)
+    training_completion_pct: float | None = Field(default=None, ge=0, le=100)
+    demo_capability: bool | None = None
+    data_reporting_quality_pct: float | None = Field(default=None, ge=0, le=100)
+    pricing_violations: int | None = Field(default=None, ge=0)
+    unauthorized_sales_incidents: int | None = Field(default=None, ge=0)
+    sanctions_match: bool | None = None
+    material_contract_breach: bool | None = None
+
+    @field_validator("country_code")
+    @classmethod
+    def uppercase_country(cls, value: str) -> str:
+        return value.upper()
+
+
+class MetricRule(BaseModel):
+    pillar: str
+    method: str
+    weight: float = Field(gt=0)
+    good: float | None = None
+    bad: float | None = None
+    low: float | None = None
+    high: float | None = None
+    hard_low: float | None = None
+    hard_high: float | None = None
+
+
+class Policy(BaseModel):
+    policy_id: str
+    priority: int = 0
+    match: dict[str, str] = Field(default_factory=dict)
+    pillar_weights: dict[str, float] = Field(default_factory=dict)
+    metrics: dict[str, MetricRule] = Field(default_factory=dict)
+    thresholds: dict[str, float] = Field(default_factory=dict)
+
+
+class RiskFlag(BaseModel):
+    code: str
+    severity: RiskSeverity
+    message: str
+    evidence: dict[str, Any] = Field(default_factory=dict)
+
+
+class EvaluationResult(BaseModel):
+    partner_id: str
+    policy_id: str
+    score: float | None
+    confidence: float
+    pillar_scores: dict[str, float | None]
+    metric_scores: dict[str, float | None]
+    tier: str
+    risks: list[RiskFlag]
+    gate_codes: list[str]
+    governance_status: GovernanceStatus
+    recommendations: list[str]

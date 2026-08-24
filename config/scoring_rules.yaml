@@ -1,0 +1,64 @@
+version: "1.0.0"
+policies:
+  - policy_id: POL-DEFAULT-001
+    priority: 0
+    match: {}
+    pillar_weights:
+      commercial: 0.25
+      market: 0.15
+      operational: 0.20
+      financial: 0.15
+      capability: 0.15
+      compliance: 0.10
+    metrics:
+      target_achievement_pct: {pillar: commercial, method: linear, bad: 50, good: 110, weight: 0.55}
+      yoy_growth_pct: {pillar: commercial, method: linear, bad: -20, good: 30, weight: 0.45}
+      active_dealers: {pillar: market, method: linear, bad: 0, good: 30, weight: 0.50}
+      geographic_coverage_pct: {pillar: market, method: linear, bad: 20, good: 90, weight: 0.50}
+      inventory_days: {pillar: operational, method: optimal_band, low: 45, high: 90, hard_low: 0, hard_high: 180, weight: 0.55}
+      forecast_accuracy_pct: {pillar: operational, method: linear, bad: 40, good: 90, weight: 0.45}
+      payment_on_time_pct: {pillar: financial, method: linear, bad: 50, good: 98, weight: 0.60}
+      ar_overdue_90d_pct: {pillar: financial, method: inverse_linear, good: 0, bad: 30, weight: 0.40}
+      certified_engineers: {pillar: capability, method: linear, bad: 0, good: 5, weight: 0.45}
+      training_completion_pct: {pillar: capability, method: linear, bad: 20, good: 95, weight: 0.30}
+      demo_capability: {pillar: capability, method: boolean, weight: 0.25}
+      data_reporting_quality_pct: {pillar: compliance, method: linear, bad: 40, good: 100, weight: 0.50}
+      pricing_violations: {pillar: compliance, method: inverse_linear, good: 0, bad: 3, weight: 0.25}
+      unauthorized_sales_incidents: {pillar: compliance, method: inverse_linear, good: 0, bad: 2, weight: 0.25}
+    thresholds:
+      minimum_confidence: 0.70
+      inventory_days_low: 45
+      inventory_days_high: 90
+      ar_overdue_90d_high_pct: 20
+      data_quality_low_pct: 60
+  - policy_id: POL-EMERGING-001
+    priority: 10
+    match: {lifecycle_stage: EMERGING}
+    pillar_weights:
+      commercial: 0.15
+      market: 0.25
+      operational: 0.10
+      financial: 0.10
+      capability: 0.30
+      compliance: 0.10
+  - policy_id: POL-MATURE-001
+    priority: 10
+    match: {lifecycle_stage: MATURE}
+    pillar_weights:
+      commercial: 0.25
+      market: 0.10
+      operational: 0.25
+      financial: 0.20
+      capability: 0.10
+      compliance: 0.10
+  - policy_id: POL-AGR-PL-GROWTH-001
+    priority: 30
+    match: {business_line: AGRICULTURE, country_code: PL, lifecycle_stage: GROWTH}
+    pillar_weights:
+      commercial: 0.25
+      market: 0.25
+      operational: 0.15
+      financial: 0.10
+      capability: 0.15
+      compliance: 0.10
+
