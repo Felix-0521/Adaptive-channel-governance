@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=72"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adaptive-channel-governance"
+version = "0.1.0"
+description = "Explainable, policy-driven partner governance decision support"
+requires-python = ">=3.12"
+dependencies = [
+  "streamlit>=1.37,<2",
+  "pandas>=2.2,<3",
+  "plotly>=5.23,<7",
+  "pydantic>=2.8,<3",
+  "PyYAML>=6.0,<7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
