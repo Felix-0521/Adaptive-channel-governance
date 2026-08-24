@@ -1,7 +1,7 @@
 # Adaptive Channel Governance & Partner Scoring Platform
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-18%20passing-2E7D32)](tests/)
+[![Tests](https://img.shields.io/badge/tests-45%20passing-2E7D32)](tests/)
 [![Data](https://img.shields.io/badge/data-synthetic%20only-555555)](data/sample_partners.csv)
 
 An explainable, policy-driven decision-support MVP for global Sales Operations
@@ -33,7 +33,7 @@ flowchart LR
     D --> H[Governance status]
     E --> H
     F --> H
-    G --> I[Human-reviewed recommendation]
+    G --> I[Recommended Action]
     H --> I
 ```
 
@@ -41,13 +41,19 @@ flowchart LR
 
 - Strict Pydantic data contract with row-level validation feedback
 - Business/country/lifecycle-aware YAML policy resolution
+- Explicit Country Override → Exact Context → Business + Lifecycle → Lifecycle
+  → Global Default inheritance with visible policy source
+- Policy Studio with independently validated Pillar and Metric weights
+- Draft → Scenario Tested → Active → Archived lifecycle and activation audit
 - Explainable metric, pillar, and overall partner scoring
 - Confidence based on observed weighted inputs; missing data is never zero
 - Inventory optimal-band scoring instead of “lower is always better”
 - Risk signals reported independently from overall partner quality
 - Critical gates capable of holding a high-scoring partner for human review
-- Partner tier, governance status, and deterministic support recommendations
-- Executive portfolio overview, Partner 360, and data-quality UI
+- Partner tier, governance status, and structured Recommended Actions
+- Single Partner, Selected Market, and Full Portfolio scenario comparison
+- Executive overview, Partner 360, Policy Studio, Scenario Lab, Data Quality,
+  and Audit Log UI
 - SQLite schema boundary for later evaluation and audit persistence
 
 The score never automatically determines price, margin, rebate, credit limit,
@@ -92,10 +98,11 @@ data/sample_partners.csv       Fictional demonstration observations
 src/channel_governance/
   models.py                    Pydantic input/output contracts
   validation.py                DataFrame validation boundary
-  policy.py                    Policy loading, inheritance, resolution
+  policy.py                    Resolution, lifecycle, activation audit
   scoring.py                   Normalization, score, confidence
-  governance.py                Risk, gates, tier, status, recommendation
+  governance.py                Risk, gates, tier, status, Recommended Action
   evaluation.py                Application orchestration service
+  scenario.py                  Multi-scope baseline/draft comparison
   storage.py                   SQLite schema boundary
 tests/                         Unit and end-to-end tests
 docs/                          Data contract and verification evidence
@@ -108,10 +115,13 @@ AI_USAGE.md                    Truthful AI-assisted development record
 python -m pytest
 ```
 
-Current verified result: **18 tests passed**. Tests include missing data,
-normalization boundaries, policy specificity, inventory bands, independent
-risk, critical gates, tier boundaries, SQLite setup, and complete portfolio
-evaluation. See [Day 1 verification](docs/DAY1_VERIFICATION.md).
+Current verified result: **45 tests passed**. Tests include a full Streamlit
+application execution check, two-level weight
+validation, score propagation, explicit fallback sources, Country Overrides,
+Draft/Active isolation, activation audit, three scenario scopes, tier
+migration, risk stability, structured Recommended Actions, missing data,
+critical gates, SQLite setup, and complete portfolio evaluation. See the
+[adaptive policy workflow](docs/POLICY_WORKFLOW.md).
 
 ## AI-assisted development
 
@@ -123,12 +133,12 @@ approaches.
 
 ## Roadmap
 
-- Stable now: data contract, policies, scoring, confidence, risk, gates, tiers,
-  recommendations, Executive Overview, Partner 360, data-quality view, tests
-- Next: scenario simulation and policy comparison
-- Later: target rationale, policy/audit UI, optional deterministic or LLM-based
-  management narrative
+- Stable now: data contract, adaptive policies, two-level weights, Country
+  Overrides, lifecycle/audit, scoring, confidence, risk, gates, tiers,
+  Recommended Actions, Executive Overview, Partner 360, Policy Studio,
+  Scenario Lab, Data Quality, and tests
+- Next: target rationale and persistent SQLite policy/audit storage
+- Later: optional deterministic or LLM-based management narrative
 
 P0 stability and fresh-clone reproducibility take priority over optional
 features and artificial line-count expansion.
-

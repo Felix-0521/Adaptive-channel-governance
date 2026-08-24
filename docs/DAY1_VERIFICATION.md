@@ -28,9 +28,9 @@
 
 - Risk signals remain independent from score
 - Critical gates can hold a high-scoring partner without rewriting its score
-- Tier, governance status, and human-review recommendations
+- Tier, governance status, and human-reviewed Recommended Actions
 - SQLite schema boundary ready for evaluation/audit persistence
-- Suggested commit: `feat: add risk gates tiers and recommendations`
+- Suggested commit: `feat: add risk gates tiers and recommended actions`
 
 ## Commands
 
