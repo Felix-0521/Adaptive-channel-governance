@@ -17,12 +17,13 @@ def healthy(**changes) -> PartnerRecord:
     return PartnerRecord(**(values | changes))
 
 
-def test_tier_boundaries() -> None:
-    assert classify_tier(None) == "UNRATED"
-    assert classify_tier(90) == "STRATEGIC"
-    assert classify_tier(75) == "CORE"
-    assert classify_tier(60) == "DEVELOPMENT"
-    assert classify_tier(59.99) == "WATCHLIST"
+def test_tier_boundaries(policies) -> None:
+    policy = policies.resolve(healthy(country_code="DE"))
+    assert classify_tier(None, policy) == "UNRATED"
+    assert classify_tier(90, policy) == "STRATEGIC"
+    assert classify_tier(75, policy) == "CORE"
+    assert classify_tier(60, policy) == "DEVELOPMENT"
+    assert classify_tier(59.99, policy) == "WATCHLIST"
 
 
 def test_critical_gate_does_not_overwrite_high_score_or_tier(policies) -> None:

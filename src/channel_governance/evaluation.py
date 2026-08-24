@@ -16,11 +16,13 @@ def evaluate_partner(partner: PartnerRecord, policies: PolicyRepository) -> Eval
     score, confidence, pillar_scores, metric_scores = score_partner(partner, policy)
     risks = detect_risks(partner, policy)
     gates = evaluate_gates(partner)
-    tier = classify_tier(score)
+    tier = classify_tier(score, policy)
     status = governance_status(confidence, risks, gates, policy.thresholds["minimum_confidence"])
     return EvaluationResult(
         partner_id=partner.partner_id,
         policy_id=policy.policy_id,
+        policy_version=policy.version,
+        policy_source=policy.source_label,
         score=score,
         confidence=confidence,
         pillar_scores=pillar_scores,
@@ -46,6 +48,8 @@ def evaluate_portfolio(frame: pd.DataFrame, policies: PolicyRepository) -> pd.Da
             "lifecycle_stage": partner.lifecycle_stage.value,
             "market_tier": partner.market_tier.value,
             "policy_id": result.policy_id,
+            "policy_version": result.policy_version,
+            "policy_source": result.policy_source,
             "score": result.score,
             "confidence": result.confidence,
             "tier": result.tier,

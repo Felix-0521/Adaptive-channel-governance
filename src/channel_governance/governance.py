@@ -52,14 +52,14 @@ def evaluate_gates(partner: PartnerRecord) -> list[str]:
     return gates
 
 
-def classify_tier(score: float | None) -> str:
+def classify_tier(score: float | None, policy: Policy) -> str:
     if score is None:
         return "UNRATED"
-    if score >= 90:
+    if score >= policy.tier_rules["STRATEGIC"]:
         return "STRATEGIC"
-    if score >= 75:
+    if score >= policy.tier_rules["CORE"]:
         return "CORE"
-    if score >= 60:
+    if score >= policy.tier_rules["DEVELOPMENT"]:
         return "DEVELOPMENT"
     return "WATCHLIST"
 

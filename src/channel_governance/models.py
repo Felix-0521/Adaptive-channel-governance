@@ -50,6 +50,12 @@ class GovernanceStatus(StrEnum):
     HOLD = "HOLD"
 
 
+class PolicyStatus(StrEnum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
 class PartnerRecord(BaseModel):
     """Synthetic partner observation. Optional metrics preserve missingness."""
 
@@ -102,11 +108,29 @@ class MetricRule(BaseModel):
 
 class Policy(BaseModel):
     policy_id: str
+    version: int = Field(default=1, ge=1)
+    status: PolicyStatus = PolicyStatus.ACTIVE
+    scenario_tested: bool = False
+    base_version: int | None = None
     priority: int = 0
     match: dict[str, str] = Field(default_factory=dict)
     pillar_weights: dict[Pillar, float] = Field(default_factory=dict)
     metrics: dict[str, MetricRule] = Field(default_factory=dict)
     thresholds: dict[str, float] = Field(default_factory=dict)
+    tier_rules: dict[str, float] = Field(
+        default_factory=lambda: {"STRATEGIC": 90, "CORE": 75, "DEVELOPMENT": 60}
+    )
+    source_label: str = ""
+    selection_level: str = ""
+
+
+class AuditRecord(BaseModel):
+    timestamp: str
+    policy_id: str
+    old_version: int | None
+    new_version: int
+    actor: str
+    change_reason: str
 
 
 class RiskFlag(BaseModel):
@@ -119,6 +143,8 @@ class RiskFlag(BaseModel):
 class EvaluationResult(BaseModel):
     partner_id: str
     policy_id: str
+    policy_version: int
+    policy_source: str
     score: float | None
     confidence: float
     pillar_scores: dict[str, float | None]
