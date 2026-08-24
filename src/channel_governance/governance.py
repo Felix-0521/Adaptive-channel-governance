@@ -1,8 +1,17 @@
-"""Independent risk, gate, tier, status, and recommendation rules."""
+"""Independent risk, gate, tier, status, and Recommended Action rules."""
 
 from __future__ import annotations
 
-from .models import GovernanceStatus, PartnerRecord, Policy, RiskFlag, RiskSeverity
+from .models import (
+    ActionPriority,
+    GovernanceStatus,
+    PartnerRecord,
+    Policy,
+    RecommendedAction,
+    RecommendedActionType,
+    RiskFlag,
+    RiskSeverity,
+)
 
 
 def detect_risks(partner: PartnerRecord, policy: Policy) -> list[RiskFlag]:
@@ -77,25 +86,161 @@ def governance_status(
     return GovernanceStatus.ACTIVE
 
 
-def recommend(
-    partner: PartnerRecord, tier: str, risks: list[RiskFlag], status: GovernanceStatus
-) -> list[str]:
-    if status == GovernanceStatus.HOLD:
-        return ["Pause discretionary support and route the case to human compliance/legal review."]
-    by_code = {risk.code for risk in risks}
-    actions: list[str] = []
-    if "EXCESS_INVENTORY" in by_code:
-        actions.append("Review sell-in assumptions and agree a sell-out-led inventory recovery plan.")
-    if "OVERDUE_AR" in by_code:
-        actions.append("Run a joint Finance and Sales Operations receivables review.")
-    if "LOW_DATA_QUALITY" in by_code:
-        actions.append("Complete missing reporting controls before expanding discretionary support.")
-    if "PRICING_DISCIPLINE" in by_code:
-        actions.append("Investigate the pricing-discipline signal; do not infer a legal conclusion.")
-    if partner.lifecycle_stage.value == "EMERGING" and (partner.certified_engineers or 0) < 2:
-        actions.append("Prioritize technical certification and demo enablement.")
+def recommended_actions(
+    partner: PartnerRecord,
+    policy: Policy,
+    pillar_scores: dict[str, float | None],
+    metric_scores: dict[str, float | None],
+    risks: list[RiskFlag],
+    gates: list[str],
+    status: GovernanceStatus,
+    tier: str,
+) -> list[RecommendedAction]:
+    """Bridge evaluation to human action without mapping directly from total score."""
+    actions: list[RecommendedAction] = []
+    risk_codes = {risk.code for risk in risks}
+
+    def add(action, priority, reason, evidence=None):
+        actions.append(
+            RecommendedAction(
+                action=action,
+                priority=priority,
+                reason=reason,
+                evidence=evidence or {},
+                human_review_required=True,
+            )
+        )
+
+    if gates:
+        add(
+            RecommendedActionType.COMPLIANCE_REVIEW,
+            ActionPriority.HIGH,
+            "A critical gate requires specialist review before any growth action.",
+            {"gate_codes": gates},
+        )
+        add(
+            RecommendedActionType.NO_ADDITIONAL_SUPPORT,
+            ActionPriority.HIGH,
+            "Discretionary support should pause until the gate is reviewed by a human.",
+            {"governance_status": status.value},
+        )
+        return actions
+
+    if "OVERDUE_AR" in risk_codes:
+        add(
+            RecommendedActionType.CREDIT_REVIEW,
+            ActionPriority.HIGH,
+            "Material overdue receivables take priority over growth support.",
+            {
+                "ar_overdue_90d_pct": partner.ar_overdue_90d_pct,
+                "policy_threshold_pct": policy.thresholds["ar_overdue_90d_high_pct"],
+            },
+        )
+    if "EXCESS_INVENTORY" in risk_codes:
+        add(
+            RecommendedActionType.INVENTORY_OPTIMIZATION,
+            ActionPriority.HIGH,
+            "Inventory exceeds the configured optimal band and requires a sell-out-led plan.",
+            {
+                "inventory_days": partner.inventory_days,
+                "policy_high_days": policy.thresholds["inventory_days_high"],
+            },
+        )
+    if "PRICING_DISCIPLINE" in risk_codes:
+        add(
+            RecommendedActionType.COMPLIANCE_REVIEW,
+            ActionPriority.HIGH,
+            "The pricing-discipline signal requires investigation without presuming a legal finding.",
+            {"pricing_violations": partner.pricing_violations},
+        )
+    if any(action.priority == ActionPriority.HIGH for action in actions):
+        return actions
+
+    if "LOW_DATA_QUALITY" in risk_codes:
+        add(
+            RecommendedActionType.DATA_QUALITY_IMPROVEMENT,
+            ActionPriority.MEDIUM,
+            "Reporting quality is below the configured threshold.",
+            {
+                "data_reporting_quality_pct": partner.data_reporting_quality_pct,
+                "policy_threshold_pct": policy.thresholds["data_quality_low_pct"],
+            },
+        )
+
+    commercial = pillar_scores.get("COMMERCIAL_PERFORMANCE")
+    market = pillar_scores.get("MARKET_CAPABILITY")
+    operational = pillar_scores.get("OPERATIONAL_HEALTH")
+    financial = pillar_scores.get("FINANCIAL_HEALTH")
+    service = pillar_scores.get("SERVICE_TECH_CAPABILITY")
+
+    if partner.lifecycle_stage.value in {"BUILD", "EMERGING"}:
+        if market is not None and market < 60:
+            add(
+                RecommendedActionType.CHANNEL_EXPANSION,
+                ActionPriority.HIGH,
+                "Early-stage market coverage is below the capability benchmark.",
+                {"market_capability_score": market, "benchmark": 60},
+            )
+        if partner.demo_capability is False:
+            add(
+                RecommendedActionType.DEMO_SUPPORT,
+                ActionPriority.HIGH,
+                "The partner lacks demo capability required for early market creation.",
+                {"demo_capability": False},
+            )
+        if service is not None and service < 60:
+            if (partner.certified_engineers or 0) < 2:
+                add(
+                    RecommendedActionType.ENGINEER_SUPPORT,
+                    ActionPriority.HIGH,
+                    "Technical staffing is insufficient for the current lifecycle stage.",
+                    {"certified_engineers": partner.certified_engineers, "benchmark": 2},
+                )
+            if (partner.training_completion_pct or 0) < 70:
+                add(
+                    RecommendedActionType.TRAINING_CERTIFICATION,
+                    ActionPriority.MEDIUM,
+                    "Training completion is below the enablement benchmark.",
+                    {"training_completion_pct": partner.training_completion_pct, "benchmark_pct": 70},
+                )
+
+    new_product = partner.new_product_contribution_pct
+    new_product_benchmark = policy.thresholds["new_product_benchmark_pct"]
+    mature_and_healthy = (
+        partner.lifecycle_stage.value == "MATURE"
+        and partner.business_line == "AGRICULTURE"
+        and all(value is not None and value >= 70 for value in (commercial, operational, financial))
+    )
+    if mature_and_healthy and new_product is not None and new_product < new_product_benchmark:
+        add(
+            RecommendedActionType.NEW_PRODUCT_ENABLEMENT,
+            ActionPriority.HIGH,
+            "A healthy mature partner has new-product contribution below the policy benchmark.",
+            {
+                "new_product_contribution_pct": new_product,
+                "policy_benchmark_pct": new_product_benchmark,
+                "normalized_metric_score": metric_scores.get("new_product_contribution_pct"),
+            },
+        )
+        add(
+            RecommendedActionType.BRANDING_MDF,
+            ActionPriority.MEDIUM,
+            "Brand activation can support the reviewed new-product enablement plan.",
+            {"commercial_performance_score": commercial},
+        )
+
     if not actions and tier in {"STRATEGIC", "CORE"}:
-        actions.append("Maintain support and review co-marketing or launch enablement through human approval.")
+        add(
+            RecommendedActionType.JOINT_BUSINESS_PLANNING,
+            ActionPriority.LOW,
+            "No overriding risk or capability gap is present; maintain a reviewed joint plan.",
+            {"tier": tier, "governance_status": status.value},
+        )
     if not actions:
-        actions.append("Create a 90-day capability improvement plan and schedule a governance review.")
+        add(
+            RecommendedActionType.CORRECTIVE_ACTION_PLAN,
+            ActionPriority.MEDIUM,
+            "No targeted growth action is justified; define measurable improvement priorities.",
+            {"tier": tier, "governance_status": status.value},
+        )
     return actions

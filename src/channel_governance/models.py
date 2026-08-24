@@ -62,6 +62,29 @@ class ScenarioScope(StrEnum):
     FULL_PORTFOLIO = "FULL_PORTFOLIO"
 
 
+class ActionPriority(StrEnum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class RecommendedActionType(StrEnum):
+    BRANDING_MDF = "BRANDING_MDF"
+    ENGINEER_SUPPORT = "ENGINEER_SUPPORT"
+    DEMO_SUPPORT = "DEMO_SUPPORT"
+    TRAINING_CERTIFICATION = "TRAINING_CERTIFICATION"
+    NEW_PRODUCT_ENABLEMENT = "NEW_PRODUCT_ENABLEMENT"
+    CHANNEL_EXPANSION = "CHANNEL_EXPANSION"
+    JOINT_BUSINESS_PLANNING = "JOINT_BUSINESS_PLANNING"
+    AFTERSALES_CAPABILITY = "AFTERSALES_CAPABILITY"
+    INVENTORY_OPTIMIZATION = "INVENTORY_OPTIMIZATION"
+    CREDIT_REVIEW = "CREDIT_REVIEW"
+    DATA_QUALITY_IMPROVEMENT = "DATA_QUALITY_IMPROVEMENT"
+    CORRECTIVE_ACTION_PLAN = "CORRECTIVE_ACTION_PLAN"
+    COMPLIANCE_REVIEW = "COMPLIANCE_REVIEW"
+    NO_ADDITIONAL_SUPPORT = "NO_ADDITIONAL_SUPPORT"
+
+
 class PartnerRecord(BaseModel):
     """Synthetic partner observation. Optional metrics preserve missingness."""
 
@@ -139,6 +162,14 @@ class AuditRecord(BaseModel):
     change_reason: str
 
 
+class RecommendedAction(BaseModel):
+    action: RecommendedActionType
+    priority: ActionPriority
+    reason: str
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    human_review_required: bool = True
+
+
 class ScenarioComparison(BaseModel):
     partner_id: str
     partner_name: str
@@ -192,4 +223,4 @@ class EvaluationResult(BaseModel):
     risks: list[RiskFlag]
     gate_codes: list[str]
     governance_status: GovernanceStatus
-    recommendations: list[str]
+    recommended_actions: list[RecommendedAction]

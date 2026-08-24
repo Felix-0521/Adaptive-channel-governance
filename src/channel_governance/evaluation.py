@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .governance import classify_tier, detect_risks, evaluate_gates, governance_status, recommend
+from .governance import (
+    classify_tier,
+    detect_risks,
+    evaluate_gates,
+    governance_status,
+    recommended_actions,
+)
 from .models import EvaluationResult, PartnerRecord
 from .policy import PolicyRepository
 from .scoring import score_partner
@@ -31,7 +37,16 @@ def evaluate_partner(partner: PartnerRecord, policies: PolicyRepository) -> Eval
         risks=risks,
         gate_codes=gates,
         governance_status=status,
-        recommendations=recommend(partner, tier, risks, status),
+        recommended_actions=recommended_actions(
+            partner,
+            policy,
+            pillar_scores,
+            metric_scores,
+            risks,
+            gates,
+            status,
+            tier,
+        ),
     )
 
 
@@ -60,6 +75,8 @@ def evaluate_portfolio(frame: pd.DataFrame, policies: PolicyRepository) -> pd.Da
             ),
             "governance_status": result.governance_status.value,
             "risk_codes": ", ".join(r.code for r in result.risks),
-            "recommendation": " ".join(result.recommendations),
+            "recommended_actions": ", ".join(
+                action.action.value for action in result.recommended_actions
+            ),
         })
     return pd.DataFrame(rows)

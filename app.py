@@ -132,9 +132,15 @@ def render_partner_360(partners, evaluations) -> None:
         for gate in result.gate_codes:
             st.error(f"Gate triggered: {gate}")
     with right:
-        st.subheader("Recommended human actions")
-        for action in result.recommendations:
-            st.write(f"- {action}")
+        st.subheader("Recommended Action")
+        for action in result.recommended_actions:
+            with st.container(border=True):
+                st.markdown(f"**{action.action.value} · {action.priority.value}**")
+                st.write(action.reason)
+                st.caption(
+                    f"Evidence: {action.evidence} · Human Review Required: "
+                    f"{'Yes' if action.human_review_required else 'No'}"
+                )
 
     with st.expander("Metric-level audit trail"):
         metric_rows = [
