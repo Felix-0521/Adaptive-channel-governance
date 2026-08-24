@@ -14,7 +14,7 @@ import plotly.express as px
 import streamlit as st
 
 from channel_governance.evaluation import evaluate_partner, evaluate_portfolio
-from channel_governance.insight import generate_deterministic_insight
+from channel_governance.insight_providers import OpenAIInsightProvider, generate_management_insight
 from channel_governance.models import Pillar, ScenarioScope
 from channel_governance.policy import PolicyLifecycleManager
 from channel_governance.scenario import ScenarioService
@@ -98,7 +98,19 @@ def render_partner_360(partners, evaluations, policies) -> None:
     partner = next(item for item in partners if item.partner_id == selected_id)
     result = evaluations[selected_id]
     policy = policies.resolve(partner)
-    insight = generate_deterministic_insight(partner, result, policy)
+    ai_provider = OpenAIInsightProvider()
+    insight_options = ["Rules-based", "AI-enhanced"] if ai_provider.available else ["Rules-based"]
+    insight_mode = st.radio("Insight Mode", insight_options, horizontal=True)
+    if ai_provider.available:
+        st.caption(
+            "AI Insight: Available · Only structured management summaries are sent to the "
+            "configured AI provider. Raw uploaded datasets are not sent."
+        )
+    else:
+        st.caption("AI Insight: Disabled · OPENAI_API_KEY or the optional AI dependency is unavailable.")
+    insight = generate_management_insight(
+        partner, result, policy, ai_provider if insight_mode == "AI-enhanced" else None
+    )
 
     st.caption(
         f"Policy {result.policy_id} · {partner.lifecycle_stage.value} · "
@@ -111,7 +123,7 @@ def render_partner_360(partners, evaluations, policies) -> None:
     columns[3].metric("Governance status", result.governance_status.value.title())
 
     st.subheader("Management Insight")
-    st.caption(f"Rules-based · Severity: {insight.severity.value}")
+    st.caption(f"{insight.source.replace('_', ' ').title()} · Severity: {insight.severity.value}")
     st.markdown("**Executive Summary**")
     st.write(insight.executive_summary)
     st.markdown("**Key Drivers**")

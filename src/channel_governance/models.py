@@ -258,3 +258,24 @@ class ManagementInsight(BaseModel):
     recommended_next_step: str
     data_limitations: list[str]
     source: str = "RULES_BASED"
+
+
+class StructuredManagementContext(BaseModel):
+    """Explicit provider whitelist; domain objects and raw rows cannot cross this boundary."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    partner_name: str
+    business_line: str
+    lifecycle_stage: str
+    score: float | None
+    confidence: float
+    tier: str
+    risk_level: str
+    governance_status: str
+    policy_source: str
+    gate_codes: tuple[str, ...]
+    key_negative_drivers: tuple[dict[str, Any], ...]
+    key_positive_drivers: tuple[dict[str, Any], ...]
+    recommended_actions: tuple[dict[str, Any], ...]
+    deterministic_insight: dict[str, Any]
