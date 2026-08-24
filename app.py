@@ -36,16 +36,15 @@ def load_demo_data() -> pd.DataFrame:
 def render_overview(results: pd.DataFrame) -> None:
     """Render an executive portfolio summary without domain rules in the UI."""
     scored = results["score"].dropna()
+    high_risk = int(results["risk_level"].isin(["HIGH", "CRITICAL"]).sum())
+    review_required = int(results["governance_status"].isin(["REVIEW", "HOLD"]).sum())
     columns = st.columns(4)
-    columns[0].metric("Synthetic partners", len(results))
-    columns[1].metric("Average score", f"{scored.mean():.1f}" if not scored.empty else "N/A")
-    columns[2].metric("Average confidence", f"{results['confidence'].mean():.0%}")
-    columns[3].metric(
-        "Review / Hold",
-        int(results["governance_status"].isin(["REVIEW", "HOLD"]).sum()),
-    )
+    columns[0].metric("Total Partners", len(results))
+    columns[1].metric("Average Partner Score", f"{scored.mean():.1f}" if not scored.empty else "N/A")
+    columns[2].metric("High / Critical Risk", high_risk)
+    columns[3].metric("Review Required", review_required)
 
-    left, right = st.columns((2, 1))
+    st.markdown("#### Portfolio Governance View")
     status_colors = {
         "ACTIVE": "#2E7D32",
         "MONITOR": "#ED9B25",
@@ -64,7 +63,7 @@ def render_overview(results: pd.DataFrame) -> None:
         hover_data=["policy_id", "confidence", "tier", "risk_codes"],
     )
     score_chart.update_layout(legend_title_text="Status", height=460)
-    left.plotly_chart(score_chart, use_container_width=True)
+    st.plotly_chart(score_chart, use_container_width=True)
 
     tier_counts = results["tier"].value_counts().rename_axis("tier").reset_index(name="partners")
     tier_chart = px.bar(
@@ -75,8 +74,24 @@ def render_overview(results: pd.DataFrame) -> None:
         title="Portfolio tier mix",
         text_auto=True,
     )
-    tier_chart.update_layout(showlegend=False, height=460)
-    right.plotly_chart(tier_chart, use_container_width=True)
+    tier_chart.update_layout(showlegend=False, height=330)
+    risk_counts = results["risk_level"].value_counts().rename_axis("risk").reset_index(name="partners")
+    risk_chart = px.bar(
+        risk_counts, x="risk", y="partners", color="risk",
+        title="Risk Distribution", text_auto=True,
+        color_discrete_map={"LOW": "#2E7D32", "MEDIUM": "#ED9B25", "HIGH": "#D66B2C", "CRITICAL": "#B3261E"},
+    )
+    risk_chart.update_layout(showlegend=False, height=330)
+    lifecycle_counts = results["lifecycle_stage"].value_counts().rename_axis("lifecycle").reset_index(name="partners")
+    lifecycle_chart = px.bar(
+        lifecycle_counts, x="lifecycle", y="partners", color="lifecycle",
+        title="Lifecycle Distribution", text_auto=True,
+    )
+    lifecycle_chart.update_layout(showlegend=False, height=330)
+    chart_columns = st.columns(3)
+    chart_columns[0].plotly_chart(tier_chart, use_container_width=True)
+    chart_columns[1].plotly_chart(risk_chart, use_container_width=True)
+    chart_columns[2].plotly_chart(lifecycle_chart, use_container_width=True)
 
     st.subheader("Governance worklist")
     st.dataframe(
@@ -100,6 +115,12 @@ def render_partner_360(partners, evaluations, policies) -> None:
     partner = next(item for item in partners if item.partner_id == selected_id)
     result = evaluations[selected_id]
     policy = policies.resolve(partner)
+    severity_rank = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+    risk_level = max(
+        (risk.severity.value for risk in result.risks),
+        key=severity_rank.__getitem__,
+        default="LOW",
+    )
     ai_provider = OpenAIInsightProvider()
     insight_options = ["Rules-based", "AI-enhanced"] if ai_provider.available else ["Rules-based"]
     insight_mode = st.radio("Insight Mode", insight_options, horizontal=True)
@@ -114,15 +135,38 @@ def render_partner_360(partners, evaluations, policies) -> None:
         partner, result, policy, ai_provider if insight_mode == "AI-enhanced" else None
     )
 
-    st.caption(
-        f"Policy {result.policy_id} · {partner.lifecycle_stage.value} · "
-        f"{partner.partner_type.value}"
+    st.info(
+        f"**Context** · {partner.business_line} · {partner.country_code} · "
+        f"{partner.lifecycle_stage.value} · {partner.market_tier.value} · "
+        f"{partner.partner_type.value}  \n**Policy Source** · {result.policy_source} · "
+        f"`{result.policy_id}` v{result.policy_version}"
     )
-    columns = st.columns(4)
-    columns[0].metric("Score", f"{result.score:.1f}" if result.score is not None else "N/A")
+    columns = st.columns(5)
+    columns[0].metric("Partner Score", f"{result.score:.1f}" if result.score is not None else "N/A")
     columns[1].metric("Confidence", f"{result.confidence:.0%}")
-    columns[2].metric("Tier", result.tier.title())
-    columns[3].metric("Governance status", result.governance_status.value.title())
+    columns[2].metric("Partner Tier", result.tier.title())
+    columns[3].metric("Risk", risk_level.title())
+    columns[4].metric("Governance Status", result.governance_status.value.title())
+
+    breakdown = pd.DataFrame(
+        [
+            {"pillar": pillar.replace("_", " ").title(), "score": score}
+            for pillar, score in result.pillar_scores.items()
+            if score is not None
+        ]
+    )
+    chart = px.bar(
+        breakdown,
+        x="pillar",
+        y="score",
+        range_y=[0, 100],
+        color="score",
+        color_continuous_scale="RdYlGn",
+        title="Pillar Breakdown",
+        text_auto=".1f",
+    )
+    chart.update_layout(coloraxis_showscale=False)
+    st.plotly_chart(chart, use_container_width=True)
 
     st.subheader("Management Insight")
     st.caption(f"{insight.source.replace('_', ' ').title()} · Severity: {insight.severity.value}")
@@ -141,6 +185,27 @@ def render_partner_360(partners, evaluations, policies) -> None:
     st.markdown("**Data Confidence**")
     st.write(" ".join(insight.data_limitations))
 
+    action_left, action_right = st.columns(2)
+    with action_left:
+        st.subheader("Risk & Gate Signals")
+        if result.risks:
+            for risk in result.risks:
+                st.warning(f"{risk.severity.value} · {risk.code}: {risk.message}")
+        else:
+            st.success("No policy risk signal detected in the supplied observations.")
+        for gate in result.gate_codes:
+            st.error(f"Gate triggered: {gate}")
+    with action_right:
+        st.subheader("Recommended Action")
+        for action in result.recommended_actions:
+            with st.container(border=True):
+                st.markdown(f"**{action.action.value} · {action.priority.value}**")
+                st.write(action.reason)
+                st.caption(
+                    f"Evidence: {action.evidence} · Human Review Required: "
+                    f"{'Yes' if action.human_review_required else 'No'}"
+                )
+
     with st.expander("Target Rationale", expanded=True):
         st.caption(
             "Decision-support sanity check only · The system does not set or approve sales targets."
@@ -158,12 +223,6 @@ def render_partner_360(partners, evaluations, policies) -> None:
         )
         resource_label = target_columns[3].selectbox(
             "Resource Commitment", ["Unknown", "Confirmed", "Not confirmed"]
-        )
-        severity_rank = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
-        risk_level = max(
-            (risk.severity.value for risk in result.risks),
-            key=severity_rank.__getitem__,
-            default="LOW",
         )
         rationale = assess_target(
             TargetRationaleInput(
@@ -207,47 +266,6 @@ def render_partner_360(partners, evaluations, policies) -> None:
                 st.write("No additional assumption was generated from the supplied evidence.")
             st.markdown("**Management Review**")
             st.write(rationale.management_review)
-
-    breakdown = pd.DataFrame(
-        [
-            {"pillar": pillar.replace("_", " ").title(), "score": score}
-            for pillar, score in result.pillar_scores.items()
-            if score is not None
-        ]
-    )
-    chart = px.bar(
-        breakdown,
-        x="pillar",
-        y="score",
-        range_y=[0, 100],
-        color="score",
-        color_continuous_scale="RdYlGn",
-        title="Explainable pillar score breakdown",
-        text_auto=".1f",
-    )
-    chart.update_layout(coloraxis_showscale=False)
-    st.plotly_chart(chart, use_container_width=True)
-
-    left, right = st.columns(2)
-    with left:
-        st.subheader("Risk and gate signals")
-        if result.risks:
-            for risk in result.risks:
-                st.warning(f"{risk.severity.value} · {risk.code}: {risk.message}")
-        else:
-            st.success("No policy risk signal detected in the supplied observations.")
-        for gate in result.gate_codes:
-            st.error(f"Gate triggered: {gate}")
-    with right:
-        st.subheader("Recommended Action")
-        for action in result.recommended_actions:
-            with st.container(border=True):
-                st.markdown(f"**{action.action.value} · {action.priority.value}**")
-                st.write(action.reason)
-                st.caption(
-                    f"Evidence: {action.evidence} · Human Review Required: "
-                    f"{'Yes' if action.human_review_required else 'No'}"
-                )
 
     with st.expander("Metric-level audit trail"):
         metric_rows = [
@@ -294,7 +312,11 @@ def _policy_id_for_context(context: dict[str, str]) -> str:
 def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
     """Edit isolated drafts; only explicit activation can change active scoring."""
     st.subheader("Policy Studio")
-    st.caption("Two-level weights · explicit inheritance · Draft → Scenario → Activate")
+    st.caption("Two-level weights · explicit inheritance · Draft → Scenario → Activate · SQLite persisted")
+    st.info(
+        "**Level 1 — Pillar Weight** controls the importance of six governance dimensions.  \n"
+        "**Level 2 — Metric Weight** controls the indicators inside each Pillar."
+    )
 
     business_lines = sorted({partner.business_line for partner in partners})
     lifecycle_stages = sorted({partner.lifecycle_stage.value for partner in partners})
@@ -346,7 +368,7 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
     else:
         st.error(f"Pillar Total: {pillar_total:.0%} — must equal 100%")
 
-    st.markdown("#### Level 2 — Metric Weights")
+    st.markdown("#### ↓ Level 2 — Metric Weights (expand each Pillar)")
     metric_values = {}
     metric_totals: dict[Pillar, float] = {}
     for pillar in Pillar:
@@ -444,7 +466,8 @@ def render_scenario_lab(
 ) -> None:
     """Compare an isolated draft with active policy across three scopes."""
     st.subheader("Scenario Lab")
-    st.caption("Baseline = Current Active Policy · Scenario = Draft Policy · Active data is read-only")
+    st.info("**Baseline = Current Active Policy**  ↔  **Scenario = Draft Policy**")
+    st.caption("Active data is read-only. Scenario results never overwrite official evaluations.")
     drafts = manager.drafts()
     if not drafts:
         st.warning("Create a Draft in Policy Studio before running a scenario.")
