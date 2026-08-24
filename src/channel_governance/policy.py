@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, model_validator
 
-from .models import PartnerRecord, Policy
+from .models import PartnerRecord, Pillar, Policy
 
 
 class PolicyFile(BaseModel):
@@ -20,11 +20,19 @@ class PolicyFile(BaseModel):
         defaults = [policy for policy in self.policies if not policy.match]
         if len(defaults) != 1:
             raise ValueError("exactly one default policy is required")
-        if abs(sum(defaults[0].pillar_weights.values()) - 1.0) > 1e-9:
-            raise ValueError("default pillar weights must sum to 1.0")
         for policy in self.policies:
-            if policy.pillar_weights and abs(sum(policy.pillar_weights.values()) - 1.0) > 1e-9:
+            if set(policy.pillar_weights) != set(Pillar):
+                raise ValueError(f"{policy.policy_id} must configure all six pillar weights")
+            if abs(sum(policy.pillar_weights.values()) - 1.0) > 1e-9:
                 raise ValueError(f"{policy.policy_id} pillar weights must sum to 1.0")
+            metric_totals = {pillar: 0.0 for pillar in Pillar}
+            for rule in policy.metrics.values():
+                metric_totals[rule.pillar] += rule.weight
+            for pillar, total in metric_totals.items():
+                if abs(total - 1.0) > 1e-9:
+                    raise ValueError(
+                        f"{policy.policy_id} metric weights for {pillar.value} must sum to 1.0"
+                    )
         return self
 
 
@@ -54,6 +62,5 @@ class PolicyRepository:
         merged["priority"] = selected.priority
         merged["match"] = selected.match
         for field in ("pillar_weights", "metrics", "thresholds"):
-            merged[field].update(selected.model_dump()[field])
+            merged[field] = deepcopy(selected.model_dump()[field])
         return Policy.model_validate(merged)
-

@@ -4,7 +4,8 @@ from channel_governance.models import PartnerRecord
 def partner(**changes):
     base = dict(
         partner_id="P-1", partner_name="Synthetic", business_line="AGRICULTURE",
-        country_code="PL", lifecycle_stage="GROWTH", partner_type="DISTRIBUTOR",
+        country_code="PL", lifecycle_stage="GROWTH", market_tier="HIGH_VALUE",
+        partner_type="DISTRIBUTOR",
     )
     return PartnerRecord(**(base | changes))
 
@@ -23,4 +24,3 @@ def test_lifecycle_policy_inherits_default_metrics(policies) -> None:
 def test_default_policy_is_fallback(policies) -> None:
     resolved = policies.resolve(partner(country_code="US", lifecycle_stage="MAINTENANCE"))
     assert resolved.policy_id == "POL-DEFAULT-001"
-

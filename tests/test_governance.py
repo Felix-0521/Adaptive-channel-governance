@@ -6,8 +6,9 @@ from channel_governance.models import GovernanceStatus, PartnerRecord
 def healthy(**changes) -> PartnerRecord:
     values = dict(
         partner_id="P-1", partner_name="Synthetic", business_line="AGRICULTURE", country_code="PL",
-        lifecycle_stage="GROWTH", partner_type="DISTRIBUTOR", target_achievement_pct=110,
-        yoy_growth_pct=30, active_dealers=30, geographic_coverage_pct=90, inventory_days=60,
+        lifecycle_stage="GROWTH", market_tier="HIGH_VALUE", partner_type="DISTRIBUTOR",
+        target_achievement_pct=110, yoy_growth_pct=30, new_product_contribution_pct=30,
+        active_dealers=30, geographic_coverage_pct=90, inventory_days=60, sell_out_performance_pct=110,
         forecast_accuracy_pct=90, payment_on_time_pct=98, ar_overdue_90d_pct=0,
         certified_engineers=5, training_completion_pct=95, demo_capability=True,
         data_reporting_quality_pct=100, pricing_violations=0, unauthorized_sales_incidents=0,
@@ -42,7 +43,8 @@ def test_high_risk_requires_review_without_gate(policies) -> None:
 def test_low_confidence_requires_review(policies) -> None:
     sparse = PartnerRecord(
         partner_id="P-2", partner_name="Sparse", business_line="AGRICULTURE", country_code="PL",
-        lifecycle_stage="GROWTH", partner_type="DISTRIBUTOR", target_achievement_pct=100,
+        lifecycle_stage="GROWTH", market_tier="HIGH_VALUE", partner_type="DISTRIBUTOR",
+        target_achievement_pct=100,
     )
     result = evaluate_partner(sparse, policies)
     assert result.confidence < 0.70

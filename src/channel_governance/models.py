@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class LifecycleStage(StrEnum):
+    BUILD = "BUILD"
     EMERGING = "EMERGING"
     GROWTH = "GROWTH"
     MATURE = "MATURE"
@@ -18,6 +19,21 @@ class LifecycleStage(StrEnum):
 class PartnerType(StrEnum):
     DISTRIBUTOR = "DISTRIBUTOR"
     DEALER = "DEALER"
+
+
+class MarketTier(StrEnum):
+    HIGH_VALUE = "HIGH_VALUE"
+    GROWTH_VALUE = "GROWTH_VALUE"
+    DEVELOPING = "DEVELOPING"
+
+
+class Pillar(StrEnum):
+    COMMERCIAL_PERFORMANCE = "COMMERCIAL_PERFORMANCE"
+    MARKET_CAPABILITY = "MARKET_CAPABILITY"
+    OPERATIONAL_HEALTH = "OPERATIONAL_HEALTH"
+    FINANCIAL_HEALTH = "FINANCIAL_HEALTH"
+    SERVICE_TECH_CAPABILITY = "SERVICE_TECH_CAPABILITY"
+    COMPLIANCE_GOVERNANCE = "COMPLIANCE_GOVERNANCE"
 
 
 class RiskSeverity(StrEnum):
@@ -44,13 +60,16 @@ class PartnerRecord(BaseModel):
     business_line: str = Field(min_length=1)
     country_code: str = Field(min_length=2, max_length=2)
     lifecycle_stage: LifecycleStage
+    market_tier: MarketTier
     partner_type: PartnerType
     annual_revenue: float | None = Field(default=None, ge=0)
     target_achievement_pct: float | None = Field(default=None, ge=0, le=300)
     yoy_growth_pct: float | None = Field(default=None, ge=-100, le=500)
+    new_product_contribution_pct: float | None = Field(default=None, ge=0, le=100)
     active_dealers: int | None = Field(default=None, ge=0)
     geographic_coverage_pct: float | None = Field(default=None, ge=0, le=100)
     inventory_days: float | None = Field(default=None, ge=0, le=730)
+    sell_out_performance_pct: float | None = Field(default=None, ge=0, le=200)
     forecast_accuracy_pct: float | None = Field(default=None, ge=0, le=100)
     payment_on_time_pct: float | None = Field(default=None, ge=0, le=100)
     ar_overdue_90d_pct: float | None = Field(default=None, ge=0, le=100)
@@ -70,9 +89,9 @@ class PartnerRecord(BaseModel):
 
 
 class MetricRule(BaseModel):
-    pillar: str
+    pillar: Pillar
     method: str
-    weight: float = Field(gt=0)
+    weight: float = Field(gt=0, le=1)
     good: float | None = None
     bad: float | None = None
     low: float | None = None
@@ -85,7 +104,7 @@ class Policy(BaseModel):
     policy_id: str
     priority: int = 0
     match: dict[str, str] = Field(default_factory=dict)
-    pillar_weights: dict[str, float] = Field(default_factory=dict)
+    pillar_weights: dict[Pillar, float] = Field(default_factory=dict)
     metrics: dict[str, MetricRule] = Field(default_factory=dict)
     thresholds: dict[str, float] = Field(default_factory=dict)
 

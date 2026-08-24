@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from .models import MetricRule, PartnerRecord, Policy
+from .models import MetricRule, PartnerRecord, Pillar, Policy
 
 
 def _clamp(value: float) -> float:
@@ -35,7 +35,7 @@ def score_partner(
     partner: PartnerRecord, policy: Policy
 ) -> tuple[float | None, float, dict[str, float | None], dict[str, float | None]]:
     metric_scores: dict[str, float | None] = {}
-    pillar_values: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    pillar_values: dict[Pillar, list[tuple[float, float]]] = defaultdict(list)
     available_weight = 0.0
     total_weight = 0.0
 
@@ -56,10 +56,10 @@ def score_partner(
     for pillar, pillar_weight in policy.pillar_weights.items():
         values = pillar_values.get(pillar, [])
         if not values:
-            pillar_scores[pillar] = None
+            pillar_scores[pillar.value] = None
             continue
         pillar_score = sum(value * weight for value, weight in values) / sum(weight for _, weight in values)
-        pillar_scores[pillar] = round(pillar_score, 2)
+        pillar_scores[pillar.value] = round(pillar_score, 2)
         score_terms.append((pillar_score, pillar_weight))
 
     score = (

@@ -44,6 +44,7 @@ def evaluate_portfolio(frame: pd.DataFrame, policies: PolicyRepository) -> pd.Da
             "business_line": partner.business_line,
             "country_code": partner.country_code,
             "lifecycle_stage": partner.lifecycle_stage.value,
+            "market_tier": partner.market_tier.value,
             "policy_id": result.policy_id,
             "score": result.score,
             "confidence": result.confidence,
