@@ -1,6 +1,13 @@
 """Streamlit presentation layer for the deterministic governance engines."""
 
 from pathlib import Path
+import sys
+
+
+ROOT = Path(__file__).parent
+SRC_PATH = ROOT / "src"
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
 
 import pandas as pd
 import plotly.express as px
@@ -13,7 +20,6 @@ from channel_governance.scenario import ScenarioService
 from channel_governance.validation import require_valid_dataframe
 
 
-ROOT = Path(__file__).parent
 POLICY_PATH = ROOT / "config" / "scoring_rules.yaml"
 DATA_PATH = ROOT / "data" / "sample_partners.csv"
 
