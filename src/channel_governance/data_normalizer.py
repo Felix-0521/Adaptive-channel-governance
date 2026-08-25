@@ -166,21 +166,35 @@ def _parse_int_cell(raw: Any) -> int | None:
 def _strip_sheet(
     df: pd.DataFrame, schema: TemplateSchema
 ) -> tuple[pd.DataFrame, list[NormalizerIssue]]:
-    """Drop title and header rows, trim to schema column count, clean empty cells.
+    """Skip the title row if present, trim to schema column count, clean empty cells.
 
-    openpyxl with values_only=True reads a sheet as:
-      row 0 = title (always skipped)
-      row 1 = column headers  (skipped here; df.columns is already set by caller)
-      row 2+ = actual data rows
+    Supports two Excel layouts:
+      Case A (header-only): df.columns already holds the schema field names
+                            and row 0 is the first data row.
+                            => skip 0 leading rows.
+      Case B (title+header): row 0 is a title row, row 1 repeats the header
+                             text, and row 2+ is data. df.columns was set to
+                             schema field names by the caller.
+                             => skip 1 leading row.
+
+    Detection rule: if the value in row 1 under the join-key column equals the
+    join-key column name itself, the file repeats the header in row 1 (Case B)
+    and we drop row 0. Otherwise row 0 is the first data row (Case A) and we
+    keep it.
 
     Returns the cleaned DataFrame and any non-blocking issues found during processing.
     """
     issues: list[NormalizerIssue] = []
 
-    # Skip title row (index 0) and header row (index 1)
-    # The DataFrame column names are already set by the caller (via _excel_df
-    # or by openpyxl reading). We only need to keep the actual data rows.
-    df = df.iloc[2:].copy().reset_index(drop=True)
+    # Detect whether a title row is present above the header.
+    needs_title_skip = False
+    if len(df) >= 2 and schema.join_key in df.columns:
+        second_row_first_cell = df.iat[1, 0]
+        if second_row_first_cell is not None and str(second_row_first_cell).strip() == schema.join_key:
+            needs_title_skip = True
+
+    if needs_title_skip:
+        df = df.iloc[1:].copy().reset_index(drop=True)
 
     # The schema defines which columns matter; ignore any extra trailing cols
     schema_col_count = len(schema.fields)

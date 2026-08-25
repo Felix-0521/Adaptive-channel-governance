@@ -430,7 +430,85 @@ class TestMultiTemplateJoin:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TEST 9 — Missing data reduces quality score
+# TEST 10b — Header layout detection (header-only vs title+header)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _header_only_df(headers: list[str], data_rows: list[list]) -> pd.DataFrame:
+    """Build a DataFrame mimicking pandas default read_excel(header=0).
+
+    Mimics files that contain only a header row followed by data rows
+    (no title row). Columns are taken from the header list and the data
+    rows are appended below them in order.
+    """
+    padded = [r + [""] * (len(headers) - len(r)) if len(r) < len(headers) else r for r in data_rows]
+    df = pd.DataFrame(padded, columns=headers)
+    return df
+
+
+class TestHeaderLayoutDetection:
+    def test_header_only_template_preserves_first_partner(self):
+        headers = ["Partner_ID", "Partner_Name", "Country", "Region",
+                   "Business_Line", "Partner_Type", "Lifecycle_Stage",
+                   "Market_Tier", "Cooperation_Start_Date"]
+        data = [
+            ["PT00001", "Partner_First", "Poland", "CEE",
+             "AGRICULTURE", "DISTRIBUTOR", "GROWTH", "HIGH_VALUE", "2021-01-01"],
+            ["PT00002", "Partner_Second", "Germany", "DACH",
+             "AGRICULTURE", "DISTRIBUTOR", "GROWTH", "HIGH_VALUE", "2021-01-01"],
+        ]
+        df = _header_only_df(headers, data)
+
+        result = normalize_excel_templates({TemplateId.PARTNER_MASTER: df})
+
+        assert result.success
+        ids = sorted(r.partner_id for r in result.partner_records)
+        assert ids == ["PT00001", "PT00002"], (
+            f"Header-only template must preserve the first partner; got {ids}"
+        )
+
+    def test_title_plus_header_template_skips_title(self):
+        headers = ["Partner_ID", "Partner_Name", "Country", "Region",
+                   "Business_Line", "Partner_Type", "Lifecycle_Stage",
+                   "Market_Tier", "Cooperation_Start_Date"]
+        data = [
+            ["PT00001", "Partner_01", "Poland", "CEE",
+             "AGRICULTURE", "DISTRIBUTOR", "GROWTH", "HIGH_VALUE", "2021-01-01"],
+        ]
+        df = _excel_df(headers, data)
+
+        result = normalize_excel_templates({TemplateId.PARTNER_MASTER: df})
+
+        assert result.success
+        ids = [r.partner_id for r in result.partner_records]
+        assert "PT00001" in ids, (
+            f"Title+header template must skip only the title row; got {ids}"
+        )
+
+    def test_50_partners_input_returns_50_normalized_records(self):
+        headers = ["Partner_ID", "Partner_Name", "Country", "Region",
+                   "Business_Line", "Partner_Type", "Lifecycle_Stage",
+                   "Market_Tier", "Cooperation_Start_Date"]
+        data = [
+            [f"PT{i:05d}", f"Partner_{i:02d}", "Poland", "CEE",
+             "AGRICULTURE", "DISTRIBUTOR", "GROWTH", "HIGH_VALUE", "2021-01-01"]
+            for i in range(1, 51)
+        ]
+        df = _header_only_df(headers, data)
+
+        result = normalize_excel_templates({TemplateId.PARTNER_MASTER: df})
+
+        assert result.success
+        assert len(result.partner_records) == 50, (
+            f"Expected 50 records from header-only 50-row template; "
+            f"got {len(result.partner_records)}"
+        )
+        ids = sorted(r.partner_id for r in result.partner_records)
+        assert ids[0] == "PT00001"
+        assert ids[-1] == "PT00050"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TEST 11 — Missing data reduces quality score
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TestDataQualityScore:
