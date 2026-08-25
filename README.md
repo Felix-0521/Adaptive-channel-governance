@@ -9,7 +9,7 @@
 
 **Adaptive Channel Governance & Partner Scoring Platform 是一个可运行的 Sales Operations 决策支持系统原型，通过 Adaptive Policy、Partner Score、Risk、Gate、Scenario Simulation 与 Management Insight，帮助管理者对不同业务阶段和市场环境下的渠道伙伴进行差异化治理。**
 
-> **Synthetic Data 声明：本仓库中的 Partner、Distributor、销售、库存、授信、评分参数和 Policy 数据均为 Synthetic Data，仅用于项目演示，不包含任何小米、海康威视、FJDynamics 或其他公司的真实商业数据。**
+> **Synthetic Data 声明：本仓库中的 Partner、Distributor、销售、库存、授信、评分参数和 Policy 数据均为 Synthetic Data，仅用于项目演示，不包含任何公司的真实商业数据。**
 > All datasets and commercial parameters in this repository are synthetic and created solely for demonstration purposes.
 
 本项目是一个 independently designed software prototype，不是任何公司的 Official System、Production System、Internal Tool 或真实 Distributor Deployment。
