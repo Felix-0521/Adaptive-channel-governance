@@ -26,16 +26,22 @@ def _null_to_none(value: Any) -> Any:
 def validate_dataframe(frame: pd.DataFrame) -> tuple[list[PartnerRecord], list[ValidationIssue]]:
     records: list[PartnerRecord] = []
     issues: list[ValidationIssue] = []
-    required = set(PartnerRecord.model_fields)
+    contract_fields = set(PartnerRecord.model_fields)
+    required = {
+        name for name, field in PartnerRecord.model_fields.items() if field.is_required()
+    }
     missing_columns = sorted(required - set(frame.columns))
     if missing_columns:
         return [], [ValidationIssue(-1, name, "required column is missing") for name in missing_columns]
-    unknown_columns = sorted(set(frame.columns) - required)
+    unknown_columns = sorted(set(frame.columns) - contract_fields)
     if unknown_columns:
         return [], [ValidationIssue(-1, name, "column is not part of the data contract") for name in unknown_columns]
 
     for position, (_, row) in enumerate(frame.iterrows(), start=2):
-        payload = {key: _null_to_none(row[key]) for key in required}
+        payload = {
+            key: _null_to_none(row[key]) if key in frame.columns else None
+            for key in contract_fields
+        }
         try:
             records.append(PartnerRecord.model_validate(payload))
         except ValidationError as exc:

@@ -21,7 +21,8 @@ def test_database_schema_is_created(tmp_path) -> None:
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
         }
     assert {
-        "evaluation_runs", "evaluation_results", "policy_state", "audit_history", "app_metadata"
+        "evaluation_runs", "evaluation_results", "policy_state", "audit_history",
+        "app_metadata", "managed_partners"
     }.issubset(tables)
 
 

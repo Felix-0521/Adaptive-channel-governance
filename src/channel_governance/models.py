@@ -116,6 +116,7 @@ class PartnerRecord(BaseModel):
     partner_name: str = Field(min_length=1)
     business_line: str = Field(min_length=1)
     country_code: str = Field(min_length=2, max_length=2)
+    region: str | None = None
     lifecycle_stage: LifecycleStage
     market_tier: MarketTier
     partner_type: PartnerType

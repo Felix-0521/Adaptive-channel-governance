@@ -9,4 +9,4 @@ ROOT = Path(__file__).parents[1]
 def test_streamlit_app_executes_without_exception() -> None:
     app = AppTest.from_file(ROOT / "app.py").run(timeout=20)
     assert not app.exception
-
+    assert any("Partner Management" in tab.label for tab in app.tabs)

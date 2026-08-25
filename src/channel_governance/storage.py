@@ -8,7 +8,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
-from .models import AuditRecord, Policy
+from .models import AuditRecord, PartnerRecord, Policy
 
 
 SCHEMA = """
@@ -54,6 +54,17 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS managed_partners (
+    partner_id TEXT PRIMARY KEY,
+    partner_name TEXT NOT NULL,
+    country_code TEXT NOT NULL,
+    region TEXT,
+    source TEXT NOT NULL,
+    partner_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS managed_partner_name_country
+ON managed_partners(lower(partner_name), country_code);
 """
 
 
@@ -150,3 +161,50 @@ class SQLitePolicyStore:
                 )
             ]
         return (version_row[0] if version_row else "sqlite", policies, audits)
+
+
+class SQLitePartnerStore:
+    """Local persistence for user-created and imported synthetic Partner records."""
+
+    def __init__(self, path: str | Path):
+        self.path = Path(path)
+        initialize_database(self.path)
+
+    def list_partners(self) -> list[PartnerRecord]:
+        with sqlite3.connect(self.path) as connection:
+            rows = connection.execute(
+                "SELECT partner_json FROM managed_partners ORDER BY created_at, partner_id"
+            ).fetchall()
+        return [PartnerRecord.model_validate_json(row[0]) for row in rows]
+
+    def save_partners(
+        self, partners: list[PartnerRecord], *, source: str
+    ) -> None:
+        if not partners:
+            return
+        created_at = datetime.now(timezone.utc).isoformat()
+        try:
+            with sqlite3.connect(self.path) as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                connection.executemany(
+                    """INSERT INTO managed_partners (
+                        partner_id, partner_name, country_code, region, source,
+                        partner_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    [
+                        (
+                            partner.partner_id,
+                            partner.partner_name,
+                            partner.country_code,
+                            partner.region,
+                            source,
+                            partner.model_dump_json(),
+                            created_at,
+                        )
+                        for partner in partners
+                    ],
+                )
+        except sqlite3.IntegrityError as error:
+            raise ValueError(
+                "Duplicate Partner ID or Partner Name + Country already exists."
+            ) from error

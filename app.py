@@ -15,9 +15,23 @@ import streamlit as st
 
 from channel_governance.evaluation import evaluate_partner, evaluate_portfolio
 from channel_governance.insight_providers import OpenAIInsightProvider, generate_management_insight
-from channel_governance.models import Pillar, RiskSeverity, ScenarioScope, TargetRationaleInput
+from channel_governance.models import (
+    LifecycleStage,
+    MarketTier,
+    PartnerType,
+    Pillar,
+    RiskSeverity,
+    ScenarioScope,
+    TargetRationaleInput,
+)
+from channel_governance.partner_management import (
+    analyze_partner_import,
+    create_partner,
+    import_partners,
+)
 from channel_governance.policy import PolicyLifecycleManager
 from channel_governance.scenario import ScenarioService
+from channel_governance.storage import SQLitePartnerStore
 from channel_governance.target_rationale import assess_target
 from channel_governance.validation import require_valid_dataframe
 
@@ -31,6 +45,124 @@ DATABASE_PATH = ROOT / "data" / "app.db"
 def load_demo_data() -> pd.DataFrame:
     """Load the repository's synthetic demonstration data."""
     return pd.read_csv(DATA_PATH)
+
+
+def load_partner_data(store: SQLitePartnerStore) -> pd.DataFrame:
+    """Combine immutable demo rows with locally managed Partner records."""
+    demo = load_demo_data()
+    managed = store.list_partners()
+    if not managed:
+        return demo
+    managed_frame = pd.DataFrame(
+        [partner.model_dump(mode="json") for partner in managed]
+    )
+    return pd.concat([demo, managed_frame], ignore_index=True, sort=False)
+
+
+def render_partner_management(
+    store: SQLitePartnerStore, existing_partners
+) -> None:
+    """Create or import Partners, then reuse the existing evaluation pipeline."""
+    st.subheader("Partner Management")
+    st.caption(
+        "New records are stored in local SQLite and evaluated by the existing "
+        "Adaptive Policy, Score, Risk, Gate, Tier, Action, and Insight engines."
+    )
+    result = st.session_state.pop("partner_management_result", None)
+    if result:
+        st.success(result)
+
+    create_tab, import_tab = st.tabs(["Create New Partner", "Partner Import"])
+    with create_tab:
+        with st.form("create-partner-form", clear_on_submit=True):
+            first_row = st.columns(3)
+            partner_name = first_row[0].text_input("Partner Name")
+            country_code = first_row[1].text_input("Country (2-letter code)", max_chars=2)
+            region = first_row[2].text_input("Region")
+            second_row = st.columns(4)
+            business_line = second_row[0].selectbox(
+                "Business Line", sorted({partner.business_line for partner in existing_partners})
+            )
+            partner_type = PartnerType(
+                second_row[1].selectbox("Partner Type", [item.value for item in PartnerType])
+            )
+            lifecycle_stage = LifecycleStage(
+                second_row[2].selectbox("Lifecycle Stage", [item.value for item in LifecycleStage])
+            )
+            market_tier = MarketTier(
+                second_row[3].selectbox("Market Tier", [item.value for item in MarketTier])
+            )
+            submitted = st.form_submit_button("Create Partner", type="primary")
+        if submitted:
+            try:
+                partner = create_partner(
+                    store,
+                    partner_name=partner_name,
+                    country_code=country_code,
+                    region=region,
+                    business_line=business_line,
+                    partner_type=partner_type,
+                    lifecycle_stage=lifecycle_stage,
+                    market_tier=market_tier,
+                )
+            except ValueError as error:
+                st.error(f"Create failed: {error}")
+            else:
+                st.session_state["partner_management_result"] = (
+                    f"✓ Partner {partner.partner_name} created with ID {partner.partner_id}. "
+                    "Dashboard and Partner 360 have been refreshed."
+                )
+                st.rerun()
+
+    with import_tab:
+        st.info(
+            "CSV is supported by the current dependency baseline. For Excel, save the "
+            "worksheet as CSV before upload. Required fields: partner_name, country_code, "
+            "region, business_line, partner_type, lifecycle_stage, market_tier."
+        )
+        uploaded = st.file_uploader("Upload Partner CSV", type=["csv"])
+        if uploaded is not None:
+            try:
+                upload_frame = pd.read_csv(uploaded)
+            except Exception as error:
+                st.error(f"Upload could not be read: {error}")
+            else:
+                analysis = analyze_partner_import(upload_frame, list(existing_partners))
+                st.markdown("#### Preview")
+                st.dataframe(analysis.preview, use_container_width=True, hide_index=True)
+                st.markdown("#### Validation")
+                if analysis.issues:
+                    st.error(f"⚠ {len(analysis.issues)} validation issue(s) found.")
+                    st.dataframe(
+                        pd.DataFrame(
+                            [
+                                {"row": issue.row, "field": issue.field, "message": issue.message}
+                                for issue in analysis.issues
+                            ]
+                        ),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+                else:
+                    st.success(f"✓ {len(analysis.records)} Partner row(s) passed validation.")
+                if analysis.warnings:
+                    st.warning(f"⚠ Missing Data / Data Quality: {len(analysis.warnings)} warning(s)")
+                    for warning in analysis.warnings:
+                        st.caption(warning)
+                if st.button(
+                    "Confirm Import",
+                    type="primary",
+                    disabled=not analysis.can_import,
+                ):
+                    try:
+                        imported = import_partners(store, analysis)
+                    except ValueError as error:
+                        st.error(f"Import failed: {error}")
+                    else:
+                        st.session_state["partner_management_result"] = (
+                            f"✓ Imported Partners: {imported}. Dashboard and Partner 360 refreshed."
+                        )
+                        st.rerun()
 
 
 def render_overview(results: pd.DataFrame) -> None:
@@ -594,17 +726,19 @@ if "policy_manager" not in st.session_state:
         POLICY_PATH, DATABASE_PATH
     )
 policy_manager: PolicyLifecycleManager = st.session_state["policy_manager"]
+partner_store = SQLitePartnerStore(DATABASE_PATH)
 policy_repository = policy_manager.active_repository()
-source_frame = load_demo_data()
+source_frame = load_partner_data(partner_store)
 partner_records = require_valid_dataframe(source_frame)
 portfolio_results = evaluate_portfolio(source_frame, policy_repository)
 evaluation_map = {
     partner.partner_id: evaluate_partner(partner, policy_repository) for partner in partner_records
 }
 
-overview_tab, partner_tab, quality_tab, policy_tab, scenario_tab, audit_tab = st.tabs(
+overview_tab, management_tab, partner_tab, quality_tab, policy_tab, scenario_tab, audit_tab = st.tabs(
     [
         "Executive overview",
+        "Partner Management",
         "Partner 360",
         "Data quality",
         "Policy Studio",
@@ -614,6 +748,8 @@ overview_tab, partner_tab, quality_tab, policy_tab, scenario_tab, audit_tab = st
 )
 with overview_tab:
     render_overview(portfolio_results)
+with management_tab:
+    render_partner_management(partner_store, partner_records)
 with partner_tab:
     render_partner_360(partner_records, evaluation_map, policy_repository)
 with quality_tab:
