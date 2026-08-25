@@ -1,5 +1,5 @@
 # Adaptive Channel Governance & Partner Scoring Platform
-## Repository SSOT — v1.3.0
+## Repository SSOT — v1.4.0
 
 Status: **ACTIVE / AUTHORITATIVE FOR IMPLEMENTATION**  
 Updated: **2026-08-25**  
@@ -216,7 +216,7 @@ Included: synthetic data, validation, adaptive Policy, two-level weights,
 Country Override, lifecycle/audit, scoring, confidence, Risk, Gate, Tier,
 Governance Status, Recommended Action, Executive Overview, Partner 360, Policy
 Studio, Scenario Lab, Data Quality, deterministic Management Insight, optional
-AI-enhanced explanation, Target Rationale, and tests.
+AI-enhanced explanation, Target Rationale, Partner Management, and tests.
 
 Deferred: real CRM/ERP integration, automatic commercial decisions,
 multi-user approvals, role permissions, external market data, mandatory AI
@@ -234,3 +234,22 @@ transactionally persisted and survive application restart.
 
 SQLite remains a local single-user prototype boundary. It does not add
 authentication, role permissions, approval workflow, or production deployment.
+
+## Partner Management boundary
+
+Partner Management may create a Partner from management Context or import CSV
+through Validation, Preview, and explicit Confirm Import. Partner ID is
+generated when absent. Managed Partner records persist in `data/app.db` and are
+combined with immutable Synthetic Demo records at runtime.
+
+Required management fields are Partner Name, Country, Region, Business Line,
+Partner Type, Lifecycle Stage, and Market Tier. Optional commercial observations
+remain unknown when absent and reduce Confidence; the system must not invent a
+Score. Created/imported records use the existing Adaptive Policy, scoring,
+Risk, Gate, Tier, Governance Status, Recommended Action, and Management Insight
+engines without alternative business logic. Duplicate Partner ID or Partner
+Name + Country is rejected.
+
+The current dependency baseline supports CSV import. Excel import is deferred
+unless an Excel engine is intentionally added. The Streamlit interface is
+Chinese-first and preserves canonical English product and technical terms.

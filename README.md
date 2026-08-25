@@ -3,7 +3,7 @@
 > 基于规则、数据与 AI 辅助诊断的全球渠道治理与经销商决策支持平台
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-66%20passing-2E7D32)](tests/)
+[![Tests](https://img.shields.io/badge/tests-73%20passing-2E7D32)](tests/)
 [![Fresh Clone](https://img.shields.io/badge/fresh--clone-passed-2E7D32)](docs/FINAL_BUILD_REPORT.md)
 [![Data](https://img.shields.io/badge/data-synthetic%20only-555555)](data/sample_partners.csv)
 
@@ -43,6 +43,12 @@ Data → Adaptive Policy → Partner Score → Risk / Gate
 - **Human-in-the-loop**：所有 Recommended Action 与管理结论都要求人工复核。
 
 ## 核心产品能力
+
+### 0. Partner Management
+
+系统支持通过表单创建 Partner，或按照 `Upload → Validation → Preview → Confirm Import` 流程导入 CSV。Partner ID 自动生成，数据保存到本地 SQLite；Missing Fields、Invalid Values、Duplicate Partner 与 Data Quality Warning 会在确认前展示。
+
+新 Partner 直接进入现有 Adaptive Policy 与 Governance Engine，不创建第二套评分逻辑。仅录入管理 Context 而尚未补充经营指标时，系统会降低 Confidence 并显示 `UNRATED`，不会伪造 Partner Score。当前依赖基线支持 CSV；Excel 可先另存为 CSV。
 
 ### 1. Adaptive Policy
 
@@ -191,12 +197,13 @@ DEMO_SUPPORT      — HIGH
 
 ## 产品界面
 
-- **Executive Overview**：Partner 数量、平均分、高风险、Review Worklist，以及 Tier/Risk/Lifecycle 分布；
-- **Partner 360**：Context → Score/Confidence/Tier/Risk/Status → Pillar → Insight → Action → Target；
-- **Policy Studio**：Country Override、Pillar Weight、可展开 Metric Weight 和 Draft/Activate；
-- **Scenario Lab**：三个 Scope 的 Baseline vs Scenario；
-- **Data Quality**：显示缺失字段如何影响 Confidence；
-- **Audit Log**：显示 SQLite 持久化的 Policy 生命周期事件。
+- **渠道总览 · Executive Overview**：Partner 数量、平均分、高风险、Review Worklist，以及 Tier/Risk/Lifecycle 分布；
+- **合作伙伴管理 · Partner Management**：创建 Partner、CSV Validation/Preview/Import 与自动刷新；
+- **合作伙伴全景分析 · Partner 360**：Context → Score/Confidence/Tier/Risk/Status → Pillar → Insight → Action → Target；
+- **策略配置中心 · Policy Studio**：Country Override、Pillar Weight、可展开 Metric Weight 和 Draft/Activate；
+- **策略模拟实验室 · Scenario Lab**：三个 Scope 的 Baseline vs Scenario；
+- **数据质量 · Data Quality**：显示缺失字段如何影响 Confidence；
+- **审计日志 · Audit Log**：显示 SQLite 持久化的 Policy 生命周期事件。
 
 ## 5 分钟本地运行
 
@@ -261,6 +268,7 @@ src/channel_governance/
   scoring.py                   Metric/Pillar Score and Confidence
   governance.py                Risk, Gate, Tier, Status, Action
   evaluation.py                Application orchestration
+  partner_management.py        Partner create/import validation workflow
   scenario.py                  Baseline vs Scenario
   insight.py                   Deterministic Management Insight
   insight_providers.py         Optional AI provider and fallback
@@ -275,10 +283,10 @@ tests/                         Pytest unit and integration tests
 
 | 指标 | 最终结果 |
 |---|---:|
-| Python Product Code | 2,245 LOC |
-| Total Python + Tests | 3,085 LOC |
-| Python Files | 29 |
-| Automated Tests | 66 passed |
+| Python Product Code | 2,545 LOC |
+| Total Python + Tests | 3,474 LOC |
+| Python Files | 31 |
+| Automated Tests | 73 passed |
 | Fresh-clone Validation | Passed |
 | Streamlit Startup Check | Passed |
 | Core AI API Requirement | None |
