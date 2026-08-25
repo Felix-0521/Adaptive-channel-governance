@@ -679,13 +679,6 @@ def _build_partner_record(
     def _market_tier(val: str | None) -> MarketTier | None:
         if val is None:
             return None
-        if val == "MID_VALUE":
-            row_issues.append(NormalizerIssue(
-                0, "market_tier",
-                f"'{val}' requires MarketTier enum extension in models.py. "
-                f"Currently only HIGH_VALUE, GROWTH_VALUE, DEVELOPING are supported."
-            ))
-            return None
         try:
             return MarketTier(val)
         except ValueError:
@@ -964,9 +957,17 @@ def normalize_excel_templates(
     # ── 5. Data quality score ────────────────────────────────────────────────
     quality_score = _compute_quality_score(partner_records)
 
+    # Per Task Card §6: success means "can we proceed to evaluation?".
+    # Warnings are non-blocking, so they must NOT flip success to False.
+    # Only file-level issues (row == -1) and messages that explicitly
+    # describe an error block downstream evaluation.
+    blocking_errors = [
+        i for i in all_issues
+        if i.row == -1 or "error" in i.message.lower()
+    ]
     success = (
         len(partner_records) > 0
-        and not any(i.row == -1 for i in all_issues)
+        and len(blocking_errors) == 0
     )
 
     return NormalizationResult(

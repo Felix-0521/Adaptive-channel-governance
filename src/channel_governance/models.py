@@ -27,6 +27,7 @@ class MarketTier(StrEnum):
     HIGH_VALUE = "HIGH_VALUE"
     GROWTH_VALUE = "GROWTH_VALUE"
     DEVELOPING = "DEVELOPING"
+    MID_VALUE = "MID_VALUE"
 
 
 class Pillar(StrEnum):
