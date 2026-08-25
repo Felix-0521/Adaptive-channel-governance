@@ -13,6 +13,8 @@ class CountryCode(str, Enum):
     FR = "FR"
     ES = "ES"
     SE = "SE"
+    NL = "NL"
+    IT = "IT"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -26,6 +28,8 @@ COUNTRY_TO_CODE: dict[str, str] = {
     "france": "FR",
     "spain": "ES",
     "sweden": "SE",
+    "netherlands": "NL",
+    "italy": "IT",
 }
 
 # Reverse map for validation / display
