@@ -206,5 +206,5 @@ class SQLitePartnerStore:
                 )
         except sqlite3.IntegrityError as error:
             raise ValueError(
-                "Duplicate Partner ID or Partner Name + Country already exists."
+                "Partner ID 或 Partner Name + Country 重复 · Duplicate Partner."
             ) from error

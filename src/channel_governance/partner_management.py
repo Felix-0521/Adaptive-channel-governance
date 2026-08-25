@@ -52,7 +52,7 @@ def create_partner(
     market_tier: MarketTier,
 ) -> PartnerRecord:
     if not region.strip():
-        raise ValueError("Region is required.")
+        raise ValueError("区域为必填项 · Region is required.")
     partner = PartnerRecord(
         partner_id=generate_partner_id(),
         partner_name=partner_name,
@@ -76,7 +76,7 @@ def analyze_partner_import(
     missing = sorted(MANAGEMENT_FIELDS - set(preview.columns))
     if missing:
         issues.extend(
-            ValidationIssue(-1, field, "required import field is missing")
+            ValidationIssue(-1, field, "缺少必填导入字段 · required import field is missing")
             for field in missing
         )
         return PartnerImportAnalysis(preview, [], issues, [])
@@ -99,10 +99,10 @@ def analyze_partner_import(
     for row, record in enumerate(records, start=2):
         key = (record.partner_name.casefold(), record.country_code)
         if record.partner_id in existing_ids:
-            issues.append(ValidationIssue(row, "partner_id", "duplicate Partner already exists"))
+            issues.append(ValidationIssue(row, "partner_id", "Partner 已存在 · duplicate Partner"))
         if key in existing_keys or key in seen_keys:
             issues.append(
-                ValidationIssue(row, "partner_name", "duplicate Partner Name + Country")
+                ValidationIssue(row, "partner_name", "Partner Name + Country 重复 · duplicate")
             )
         seen_keys.add(key)
 
@@ -112,8 +112,8 @@ def analyze_partner_import(
         missing_count = sum(getattr(record, field) is None for field in optional_fields)
         if missing_count:
             warnings.append(
-                f"{record.partner_name}: {missing_count} optional observations are missing; "
-                "Confidence will be reduced."
+                f"{record.partner_name}：缺少 {missing_count} 个可选观测值；"
+                "Confidence 将相应降低。"
             )
     return PartnerImportAnalysis(preview, records, issues, warnings)
 
@@ -122,6 +122,6 @@ def import_partners(
     store: SQLitePartnerStore, analysis: PartnerImportAnalysis
 ) -> int:
     if not analysis.can_import:
-        raise ValueError("Import must pass validation before confirmation.")
+        raise ValueError("确认前必须通过 Validation · Import must pass validation.")
     store.save_partners(analysis.records, source="CSV_IMPORT")
     return len(analysis.records)

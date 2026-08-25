@@ -63,36 +63,38 @@ def render_partner_management(
     store: SQLitePartnerStore, existing_partners
 ) -> None:
     """Create or import Partners, then reuse the existing evaluation pipeline."""
-    st.subheader("Partner Management")
+    st.subheader("合作伙伴管理 · Partner Management")
     st.caption(
-        "New records are stored in local SQLite and evaluated by the existing "
-        "Adaptive Policy, Score, Risk, Gate, Tier, Action, and Insight engines."
+        "新增记录保存到本地 SQLite，并直接复用现有 Adaptive Policy、Partner Score、"
+        "Risk、Gate、Tier、Recommended Action 与 Management Insight Engine。"
     )
     result = st.session_state.pop("partner_management_result", None)
     if result:
         st.success(result)
 
-    create_tab, import_tab = st.tabs(["Create New Partner", "Partner Import"])
+    create_tab, import_tab = st.tabs(
+        ["创建新合作伙伴 · Create New Partner", "批量导入 · Partner Import"]
+    )
     with create_tab:
         with st.form("create-partner-form", clear_on_submit=True):
             first_row = st.columns(3)
-            partner_name = first_row[0].text_input("Partner Name")
-            country_code = first_row[1].text_input("Country (2-letter code)", max_chars=2)
-            region = first_row[2].text_input("Region")
+            partner_name = first_row[0].text_input("合作伙伴名称 · Partner Name")
+            country_code = first_row[1].text_input("国家代码 · Country (2-letter code)", max_chars=2)
+            region = first_row[2].text_input("区域 · Region")
             second_row = st.columns(4)
             business_line = second_row[0].selectbox(
-                "Business Line", sorted({partner.business_line for partner in existing_partners})
+                "业务线 · Business Line", sorted({partner.business_line for partner in existing_partners})
             )
             partner_type = PartnerType(
-                second_row[1].selectbox("Partner Type", [item.value for item in PartnerType])
+                second_row[1].selectbox("合作伙伴类型 · Partner Type", [item.value for item in PartnerType])
             )
             lifecycle_stage = LifecycleStage(
-                second_row[2].selectbox("Lifecycle Stage", [item.value for item in LifecycleStage])
+                second_row[2].selectbox("生命周期阶段 · Lifecycle Stage", [item.value for item in LifecycleStage])
             )
             market_tier = MarketTier(
-                second_row[3].selectbox("Market Tier", [item.value for item in MarketTier])
+                second_row[3].selectbox("市场等级 · Market Tier", [item.value for item in MarketTier])
             )
-            submitted = st.form_submit_button("Create Partner", type="primary")
+            submitted = st.form_submit_button("创建合作伙伴 · Create Partner", type="primary")
         if submitted:
             try:
                 partner = create_partner(
@@ -106,33 +108,33 @@ def render_partner_management(
                     market_tier=market_tier,
                 )
             except ValueError as error:
-                st.error(f"Create failed: {error}")
+                st.error(f"创建失败 · Create failed: {error}")
             else:
                 st.session_state["partner_management_result"] = (
-                    f"✓ Partner {partner.partner_name} created with ID {partner.partner_id}. "
-                    "Dashboard and Partner 360 have been refreshed."
+                    f"✓ 已创建 Partner {partner.partner_name}，ID 为 {partner.partner_id}。"
+                    "渠道总览与 Partner 360 已刷新。"
                 )
                 st.rerun()
 
     with import_tab:
         st.info(
-            "CSV is supported by the current dependency baseline. For Excel, save the "
-            "worksheet as CSV before upload. Required fields: partner_name, country_code, "
-            "region, business_line, partner_type, lifecycle_stage, market_tier."
+            "当前依赖支持 CSV。Excel 文件请先另存为 CSV。必填字段 · Required fields: "
+            "partner_name, country_code, region, business_line, partner_type, "
+            "lifecycle_stage, market_tier。"
         )
-        uploaded = st.file_uploader("Upload Partner CSV", type=["csv"])
+        uploaded = st.file_uploader("上传合作伙伴 CSV · Upload Partner CSV", type=["csv"])
         if uploaded is not None:
             try:
                 upload_frame = pd.read_csv(uploaded)
             except Exception as error:
-                st.error(f"Upload could not be read: {error}")
+                st.error(f"文件读取失败 · Upload could not be read: {error}")
             else:
                 analysis = analyze_partner_import(upload_frame, list(existing_partners))
-                st.markdown("#### Preview")
+                st.markdown("#### 数据预览 · Preview")
                 st.dataframe(analysis.preview, use_container_width=True, hide_index=True)
-                st.markdown("#### Validation")
+                st.markdown("#### 数据校验 · Validation")
                 if analysis.issues:
-                    st.error(f"⚠ {len(analysis.issues)} validation issue(s) found.")
+                    st.error(f"⚠ 发现 {len(analysis.issues)} 个 Validation Issue。")
                     st.dataframe(
                         pd.DataFrame(
                             [
@@ -144,23 +146,23 @@ def render_partner_management(
                         hide_index=True,
                     )
                 else:
-                    st.success(f"✓ {len(analysis.records)} Partner row(s) passed validation.")
+                    st.success(f"✓ {len(analysis.records)} 条 Partner 记录通过 Validation。")
                 if analysis.warnings:
-                    st.warning(f"⚠ Missing Data / Data Quality: {len(analysis.warnings)} warning(s)")
+                    st.warning(f"⚠ 缺失数据 / Data Quality：{len(analysis.warnings)} 条 Warning")
                     for warning in analysis.warnings:
                         st.caption(warning)
                 if st.button(
-                    "Confirm Import",
+                    "确认导入 · Confirm Import",
                     type="primary",
                     disabled=not analysis.can_import,
                 ):
                     try:
                         imported = import_partners(store, analysis)
                     except ValueError as error:
-                        st.error(f"Import failed: {error}")
+                        st.error(f"导入失败 · Import failed: {error}")
                     else:
                         st.session_state["partner_management_result"] = (
-                            f"✓ Imported Partners: {imported}. Dashboard and Partner 360 refreshed."
+                            f"✓ 已导入 Partner：{imported}。渠道总览与 Partner 360 已刷新。"
                         )
                         st.rerun()
 
@@ -171,12 +173,12 @@ def render_overview(results: pd.DataFrame) -> None:
     high_risk = int(results["risk_level"].isin(["HIGH", "CRITICAL"]).sum())
     review_required = int(results["governance_status"].isin(["REVIEW", "HOLD"]).sum())
     columns = st.columns(4)
-    columns[0].metric("Total Partners", len(results))
-    columns[1].metric("Average Partner Score", f"{scored.mean():.1f}" if not scored.empty else "N/A")
-    columns[2].metric("High / Critical Risk", high_risk)
-    columns[3].metric("Review Required", review_required)
+    columns[0].metric("合作伙伴总数 · Total Partners", len(results))
+    columns[1].metric("平均合作伙伴评分 · Average Partner Score", f"{scored.mean():.1f}" if not scored.empty else "N/A")
+    columns[2].metric("高/严重风险 · High / Critical Risk", high_risk)
+    columns[3].metric("需要复核 · Review Required", review_required)
 
-    st.markdown("#### Portfolio Governance View")
+    st.markdown("#### 组合治理视图 · Portfolio Governance View")
     status_colors = {
         "ACTIVE": "#2E7D32",
         "MONITOR": "#ED9B25",
@@ -190,8 +192,8 @@ def render_overview(results: pd.DataFrame) -> None:
         color="governance_status",
         orientation="h",
         color_discrete_map=status_colors,
-        labels={"score": "Partner score", "partner_name": "Partner"},
-        title="Partner score and governance status",
+        labels={"score": "合作伙伴评分 · Partner Score", "partner_name": "合作伙伴 · Partner"},
+        title="合作伙伴评分与治理状态 · Partner Score & Governance Status",
         hover_data=["policy_id", "confidence", "tier", "risk_codes"],
     )
     score_chart.update_layout(legend_title_text="Status", height=460)
@@ -203,21 +205,21 @@ def render_overview(results: pd.DataFrame) -> None:
         x="tier",
         y="partners",
         color="tier",
-        title="Portfolio tier mix",
+        title="合作伙伴等级分布 · Partner Tier Distribution",
         text_auto=True,
     )
     tier_chart.update_layout(showlegend=False, height=330)
     risk_counts = results["risk_level"].value_counts().rename_axis("risk").reset_index(name="partners")
     risk_chart = px.bar(
         risk_counts, x="risk", y="partners", color="risk",
-        title="Risk Distribution", text_auto=True,
+        title="风险分布 · Risk Distribution", text_auto=True,
         color_discrete_map={"LOW": "#2E7D32", "MEDIUM": "#ED9B25", "HIGH": "#D66B2C", "CRITICAL": "#B3261E"},
     )
     risk_chart.update_layout(showlegend=False, height=330)
     lifecycle_counts = results["lifecycle_stage"].value_counts().rename_axis("lifecycle").reset_index(name="partners")
     lifecycle_chart = px.bar(
         lifecycle_counts, x="lifecycle", y="partners", color="lifecycle",
-        title="Lifecycle Distribution", text_auto=True,
+        title="生命周期分布 · Lifecycle Distribution", text_auto=True,
     )
     lifecycle_chart.update_layout(showlegend=False, height=330)
     chart_columns = st.columns(3)
@@ -225,7 +227,7 @@ def render_overview(results: pd.DataFrame) -> None:
     chart_columns[1].plotly_chart(risk_chart, use_container_width=True)
     chart_columns[2].plotly_chart(lifecycle_chart, use_container_width=True)
 
-    st.subheader("Governance worklist")
+    st.subheader("治理工作清单 · Governance Worklist")
     st.dataframe(
         results.sort_values(["governance_status", "score"], ascending=[False, True]),
         use_container_width=True,
@@ -243,7 +245,7 @@ def render_partner_360(partners, evaluations, policies) -> None:
         item.partner_id: f"{item.partner_name} · {item.country_code} · {item.business_line}"
         for item in partners
     }
-    selected_id = st.selectbox("Partner", options=list(labels), format_func=labels.__getitem__)
+    selected_id = st.selectbox("合作伙伴 · Partner", options=list(labels), format_func=labels.__getitem__)
     partner = next(item for item in partners if item.partner_id == selected_id)
     result = evaluations[selected_id]
     policy = policies.resolve(partner)
@@ -255,30 +257,30 @@ def render_partner_360(partners, evaluations, policies) -> None:
     )
     ai_provider = OpenAIInsightProvider()
     insight_options = ["Rules-based", "AI-enhanced"] if ai_provider.available else ["Rules-based"]
-    insight_mode = st.radio("Insight Mode", insight_options, horizontal=True)
+    insight_mode = st.radio("洞察模式 · Insight Mode", insight_options, horizontal=True)
     if ai_provider.available:
         st.caption(
-            "AI Insight: Available · Only structured management summaries are sent to the "
-            "configured AI provider. Raw uploaded datasets are not sent."
+            "AI Insight：可用 · 仅结构化管理摘要会发送给已配置的 AI Provider，"
+            "不会发送 Raw Dataset。"
         )
     else:
-        st.caption("AI Insight: Disabled · OPENAI_API_KEY or the optional AI dependency is unavailable.")
+        st.caption("AI Insight：已禁用 · OPENAI_API_KEY 或可选 AI 依赖不可用。")
     insight = generate_management_insight(
         partner, result, policy, ai_provider if insight_mode == "AI-enhanced" else None
     )
 
     st.info(
-        f"**Context** · {partner.business_line} · {partner.country_code} · "
+        f"**合作伙伴背景 · Context** · {partner.business_line} · {partner.country_code} · "
         f"{partner.lifecycle_stage.value} · {partner.market_tier.value} · "
-        f"{partner.partner_type.value}  \n**Policy Source** · {result.policy_source} · "
+        f"{partner.partner_type.value}  \n**策略来源 · Policy Source** · {result.policy_source} · "
         f"`{result.policy_id}` v{result.policy_version}"
     )
     columns = st.columns(5)
-    columns[0].metric("Partner Score", f"{result.score:.1f}" if result.score is not None else "N/A")
-    columns[1].metric("Confidence", f"{result.confidence:.0%}")
-    columns[2].metric("Partner Tier", result.tier.title())
-    columns[3].metric("Risk", risk_level.title())
-    columns[4].metric("Governance Status", result.governance_status.value.title())
+    columns[0].metric("合作伙伴评分 · Partner Score", f"{result.score:.1f}" if result.score is not None else "N/A")
+    columns[1].metric("数据置信度 · Confidence", f"{result.confidence:.0%}")
+    columns[2].metric("合作伙伴等级 · Partner Tier", result.tier.title())
+    columns[3].metric("风险等级 · Risk Level", risk_level.title())
+    columns[4].metric("治理状态 · Governance Status", result.governance_status.value.title())
 
     breakdown = pd.DataFrame(
         [
@@ -294,67 +296,67 @@ def render_partner_360(partners, evaluations, policies) -> None:
         range_y=[0, 100],
         color="score",
         color_continuous_scale="RdYlGn",
-        title="Pillar Breakdown",
+        title="维度评分拆解 · Pillar Breakdown",
         text_auto=".1f",
     )
     chart.update_layout(coloraxis_showscale=False)
     st.plotly_chart(chart, use_container_width=True)
 
-    st.subheader("Management Insight")
-    st.caption(f"{insight.source.replace('_', ' ').title()} · Severity: {insight.severity.value}")
-    st.markdown("**Executive Summary**")
+    st.subheader("管理洞察 · Management Insight")
+    st.caption(f"{insight.source.replace('_', ' ').title()} · 严重程度 · Severity: {insight.severity.value}")
+    st.markdown("**管理摘要 · Executive Summary**")
     st.write(insight.executive_summary)
-    st.markdown("**Key Drivers**")
+    st.markdown("**关键驱动因素 · Key Drivers**")
     for driver in insight.key_drivers:
         st.write(
             f"• {driver.metric}: {driver.explanation} "
             f"(Current: {driver.current_value}; Benchmark: {driver.benchmark}; Impact: {driver.impact})"
         )
-    st.markdown("**Management Attention**")
+    st.markdown("**管理层关注 · Management Attention**")
     st.write(insight.management_attention)
-    st.markdown("**Recommended Next Step**")
+    st.markdown("**建议下一步 · Recommended Next Step**")
     st.write(insight.recommended_next_step)
-    st.markdown("**Data Confidence**")
+    st.markdown("**数据限制与置信度 · Data Confidence**")
     st.write(" ".join(insight.data_limitations))
 
     action_left, action_right = st.columns(2)
     with action_left:
-        st.subheader("Risk & Gate Signals")
+        st.subheader("风险与门槛信号 · Risk & Gate Signals")
         if result.risks:
             for risk in result.risks:
                 st.warning(f"{risk.severity.value} · {risk.code}: {risk.message}")
         else:
-            st.success("No policy risk signal detected in the supplied observations.")
+            st.success("当前数据未检测到 Policy Risk Signal。")
         for gate in result.gate_codes:
-            st.error(f"Gate triggered: {gate}")
+            st.error(f"已触发 Gate：{gate}")
     with action_right:
-        st.subheader("Recommended Action")
+        st.subheader("管理建议 · Recommended Action")
         for action in result.recommended_actions:
             with st.container(border=True):
                 st.markdown(f"**{action.action.value} · {action.priority.value}**")
                 st.write(action.reason)
                 st.caption(
-                    f"Evidence: {action.evidence} · Human Review Required: "
-                    f"{'Yes' if action.human_review_required else 'No'}"
+                    f"证据 · Evidence: {action.evidence} · 需要人工复核 · Human Review Required: "
+                    f"{'是 · Yes' if action.human_review_required else '否 · No'}"
                 )
 
-    with st.expander("Target Rationale", expanded=True):
+    with st.expander("目标合理性分析 · Target Rationale", expanded=True):
         st.caption(
-            "Decision-support sanity check only · The system does not set or approve sales targets."
+            "仅用于决策支持与 Target Sanity Check；系统不会制定或批准销售目标。"
         )
         target_columns = st.columns(4)
         default_target = round((partner.annual_revenue or 0) * 1.10, 2) or None
         proposed_target = target_columns[0].number_input(
-            "Proposed Target", min_value=0.01, value=default_target, step=10_000.0
+            "拟议目标 · Proposed Target", min_value=0.01, value=default_target, step=10_000.0
         )
         pipeline_value = target_columns[1].number_input(
-            "Pipeline Value", min_value=0.0, value=None, step=10_000.0
+            "销售管道金额 · Pipeline Value", min_value=0.0, value=None, step=10_000.0
         )
         new_customer_plan = target_columns[2].number_input(
-            "New Customer Plan", min_value=0, value=None, step=1
+            "新客户计划 · New Customer Plan", min_value=0, value=None, step=1
         )
         resource_label = target_columns[3].selectbox(
-            "Resource Commitment", ["Unknown", "Confirmed", "Not confirmed"]
+            "资源承诺 · Resource Commitment", ["Unknown", "Confirmed", "Not confirmed"]
         )
         rationale = assess_target(
             TargetRationaleInput(
@@ -377,29 +379,29 @@ def render_partner_360(partners, evaluations, policies) -> None:
             policy,
         )
         metrics = st.columns(4)
-        metrics[0].metric("Proposed Target", f"{rationale.proposed_target:,.0f}" if rationale.proposed_target else "N/A")
-        metrics[1].metric("Required Growth", f"{rationale.required_growth_pct:+.1f}%" if rationale.required_growth_pct is not None else "N/A")
-        metrics[2].metric("Assessment", rationale.assessment.value.replace("_", " ").title())
-        metrics[3].metric("Confidence", f"{rationale.confidence:.0%}")
+        metrics[0].metric("拟议目标 · Proposed Target", f"{rationale.proposed_target:,.0f}" if rationale.proposed_target else "N/A")
+        metrics[1].metric("所需增长 · Required Growth", f"{rationale.required_growth_pct:+.1f}%" if rationale.required_growth_pct is not None else "N/A")
+        metrics[2].metric("评估结论 · Assessment", rationale.assessment.value.replace("_", " ").title())
+        metrics[3].metric("目标置信度 · Confidence", f"{rationale.confidence:.0%}")
         target_left, target_right = st.columns(2)
         with target_left:
-            st.markdown("**Supporting Drivers**")
+            st.markdown("**支持因素 · Supporting Drivers**")
             for item in rationale.supporting_drivers:
                 st.write(f"• {item}")
-            st.markdown("**Constraining Drivers**")
+            st.markdown("**制约因素 · Constraining Drivers**")
             for item in rationale.constraining_drivers:
                 st.write(f"• {item}")
         with target_right:
-            st.markdown("**Required Assumptions**")
+            st.markdown("**必要假设 · Required Assumptions**")
             if rationale.required_assumptions:
                 for item in rationale.required_assumptions:
                     st.write(f"• {item}")
             else:
-                st.write("No additional assumption was generated from the supplied evidence.")
-            st.markdown("**Management Review**")
+                st.write("当前证据未产生额外假设。")
+            st.markdown("**管理复核 · Management Review**")
             st.write(rationale.management_review)
 
-    with st.expander("Metric-level audit trail"):
+    with st.expander("指标级审计轨迹 · Metric-level Audit Trail"):
         metric_rows = [
             {
                 "metric": metric,
@@ -425,7 +427,7 @@ def render_data_quality(partners, evaluations) -> None:
             }
         )
     quality = pd.DataFrame(rows).sort_values("confidence")
-    st.info("Missing observations reduce confidence; they are never scored as zero.")
+    st.info("缺失数据会降低 Confidence，但不会被当作零分处理（NULL ≠ 0）。")
     st.dataframe(
         quality,
         use_container_width=True,
@@ -443,11 +445,11 @@ def _policy_id_for_context(context: dict[str, str]) -> str:
 
 def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
     """Edit isolated drafts; only explicit activation can change active scoring."""
-    st.subheader("Policy Studio")
-    st.caption("Two-level weights · explicit inheritance · Draft → Scenario → Activate · SQLite persisted")
+    st.subheader("策略配置中心 · Policy Studio")
+    st.caption("两层权重 · Two-level Weights · 显式继承 · Draft → Scenario → Activate · SQLite 持久化")
     st.info(
-        "**Level 1 — Pillar Weight** controls the importance of six governance dimensions.  \n"
-        "**Level 2 — Metric Weight** controls the indicators inside each Pillar."
+        "**Level 1 — Pillar Weight**：调整六大治理维度的重要性。  \n"
+        "**Level 2 — Metric Weight**：调整每个 Pillar 内部指标的重要性。"
     )
 
     business_lines = sorted({partner.business_line for partner in partners})
@@ -457,11 +459,11 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
     country_codes = sorted({partner.country_code for partner in partners})
 
     selectors = st.columns(5)
-    business_line = selectors[0].selectbox("Business Line", business_lines)
-    lifecycle_stage = selectors[1].selectbox("Lifecycle Stage", lifecycle_stages)
-    market_tier = selectors[2].selectbox("Market Tier", market_tiers)
-    partner_type = selectors[3].selectbox("Partner Type", partner_types)
-    country_override = selectors[4].selectbox("Country Override", ["None", *country_codes])
+    business_line = selectors[0].selectbox("业务线 · Business Line", business_lines)
+    lifecycle_stage = selectors[1].selectbox("生命周期阶段 · Lifecycle Stage", lifecycle_stages)
+    market_tier = selectors[2].selectbox("市场等级 · Market Tier", market_tiers)
+    partner_type = selectors[3].selectbox("合作伙伴类型 · Partner Type", partner_types)
+    country_override = selectors[4].selectbox("国家覆盖 · Country Override", ["None", *country_codes])
 
     context = {
         "business_line": business_line,
@@ -474,12 +476,12 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
 
     active = manager.active_repository().resolve_context(context)
     st.info(
-        f"Policy Source: **{active.source_label}** · `{active.policy_id}` v{active.version}"
+        f"策略来源 · Policy Source：**{active.source_label}** · `{active.policy_id}` v{active.version}"
     )
     epoch = st.session_state.get("policy_editor_epoch", 0)
     editor_key = f"{active.policy_id}-{active.version}-{hash(tuple(sorted(context.items())))}-{epoch}"
 
-    st.markdown("#### Level 1 — Pillar Weights")
+    st.markdown("#### 第一层：维度权重 · Level 1 — Pillar Weights")
     pillar_values: dict[Pillar, float] = {}
     pillar_columns = st.columns(3)
     for index, pillar in enumerate(Pillar):
@@ -496,11 +498,11 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
         )
     pillar_total = sum(pillar_values.values())
     if abs(pillar_total - 1) < 1e-9:
-        st.success("Pillar Total: 100%")
+        st.success("Pillar 权重合计 · Pillar Total：100%")
     else:
-        st.error(f"Pillar Total: {pillar_total:.0%} — must equal 100%")
+        st.error(f"Pillar 权重合计 · Pillar Total：{pillar_total:.0%} — 必须等于 100%")
 
-    st.markdown("#### ↓ Level 2 — Metric Weights (expand each Pillar)")
+    st.markdown("#### ↓ 第二层：指标权重 · Level 2 — Metric Weights（展开 Pillar）")
     metric_values = {}
     metric_totals: dict[Pillar, float] = {}
     for pillar in Pillar:
@@ -520,23 +522,23 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
                 )
             metric_totals[pillar] = sum(metric_values[name] for name, _ in rules)
             if abs(metric_totals[pillar] - 1) < 1e-9:
-                st.success(f"{pillar.value.replace('_', ' ').title()} Metric Total: 100%")
+                st.success(f"{pillar.value.replace('_', ' ').title()} 指标合计 · Metric Total：100%")
             else:
                 st.error(
-                    f"{pillar.value.replace('_', ' ').title()} Metric Total: "
-                    f"{metric_totals[pillar]:.0%} — must equal 100%"
+                    f"{pillar.value.replace('_', ' ').title()} 指标合计 · Metric Total："
+                    f"{metric_totals[pillar]:.0%} — 必须等于 100%"
                 )
 
     valid_weights = abs(pillar_total - 1) < 1e-9 and all(
         abs(total - 1) < 1e-9 for total in metric_totals.values()
     )
-    actor = st.text_input("Actor", value="Felix-0521", key=f"actor-{editor_key}")
+    actor = st.text_input("操作人 · Actor", value="Felix-0521", key=f"actor-{editor_key}")
     change_reason = st.text_input(
-        "Change reason", placeholder="Explain the business reason for this draft", key=f"reason-{editor_key}"
+        "修改原因 · Change Reason", placeholder="说明本次 Draft 的业务原因", key=f"reason-{editor_key}"
     )
     controls = st.columns(4)
     if controls[0].button(
-        "Save as Draft",
+        "保存为草稿 · Save as Draft",
         type="primary",
         disabled=not valid_weights or not actor.strip() or not change_reason.strip(),
     ):
@@ -559,20 +561,20 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
             policy_id=target_id,
         )
         st.session_state["selected_draft"] = (draft.policy_id, draft.version)
-        st.success(f"Saved `{draft.policy_id}` v{draft.version} as DRAFT. Active scores are unchanged.")
+        st.success(f"已保存 `{draft.policy_id}` v{draft.version} 为 DRAFT；Active Score 不受影响。")
 
-    if controls[1].button("Reset Changes"):
+    if controls[1].button("重置修改 · Reset Changes"):
         st.session_state["policy_editor_epoch"] = epoch + 1
         st.rerun()
 
     selected_ref = st.session_state.get("selected_draft")
     selected_draft = manager.get(*selected_ref) if selected_ref else None
-    if controls[2].button("Test in Scenario", disabled=selected_draft is None):
+    if controls[2].button("进入模拟测试 · Test in Scenario", disabled=selected_draft is None):
         st.session_state["scenario_draft"] = selected_ref
-        st.info("Draft selected. Open Scenario Lab to choose the evaluation scope.")
+        st.info("已选择 Draft，请在 Scenario Lab 中选择评估 Scope。")
 
     can_activate = selected_draft is not None and selected_draft.scenario_tested
-    if controls[3].button("Activate Policy", disabled=not can_activate):
+    if controls[3].button("激活策略 · Activate Policy", disabled=not can_activate):
         manager.activate(
             selected_draft.policy_id,
             selected_draft.version,
@@ -581,13 +583,13 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
         )
         st.session_state.pop("selected_draft", None)
         st.session_state.pop("scenario_draft", None)
-        st.success("Draft activated; the previous exact-context policy was archived.")
+        st.success("Draft 已激活；上一版 Exact-context Policy 已归档。")
         st.rerun()
 
     if selected_draft:
         st.caption(
-            f"Selected Draft: `{selected_draft.policy_id}` v{selected_draft.version} · "
-            f"Scenario Tested: {'Yes' if selected_draft.scenario_tested else 'No'}"
+            f"已选草稿 · Selected Draft：`{selected_draft.policy_id}` v{selected_draft.version} · "
+            f"已完成模拟 · Scenario Tested：{'是 · Yes' if selected_draft.scenario_tested else '否 · No'}"
         )
 
 
@@ -597,26 +599,26 @@ def render_scenario_lab(
     partners,
 ) -> None:
     """Compare an isolated draft with active policy across three scopes."""
-    st.subheader("Scenario Lab")
-    st.info("**Baseline = Current Active Policy**  ↔  **Scenario = Draft Policy**")
-    st.caption("Active data is read-only. Scenario results never overwrite official evaluations.")
+    st.subheader("策略模拟实验室 · Scenario Lab")
+    st.info("**基准 · Baseline = Current Active Policy**  ↔  **模拟 · Scenario = Draft Policy**")
+    st.caption("Active Data 只读；Scenario Result 不会覆盖正式评价。")
     drafts = manager.drafts()
     if not drafts:
-        st.warning("Create a Draft in Policy Studio before running a scenario.")
+        st.warning("运行 Scenario 前，请先在 Policy Studio 创建 Draft。")
         return
 
     draft_refs = [(draft.policy_id, draft.version) for draft in drafts]
     preferred = st.session_state.get("scenario_draft")
     default_index = draft_refs.index(preferred) if preferred in draft_refs else len(draft_refs) - 1
     selected_ref = st.selectbox(
-        "Draft Policy",
+        "草稿策略 · Draft Policy",
         draft_refs,
         index=default_index,
         format_func=lambda ref: f"{ref[0]} v{ref[1]}",
     )
     scope = ScenarioScope(
         st.radio(
-            "Scope",
+            "模拟范围 · Scope",
             [item.value for item in ScenarioScope],
             format_func=lambda value: value.replace("_", " ").title(),
             horizontal=True,
@@ -627,7 +629,7 @@ def render_scenario_lab(
     filters: dict[str, str] = {}
     if scope == ScenarioScope.SINGLE_PARTNER:
         labels = {partner.partner_id: f"{partner.partner_name} · {partner.country_code}" for partner in partners}
-        partner_id = st.selectbox("Partner", list(labels), format_func=labels.__getitem__)
+        partner_id = st.selectbox("合作伙伴 · Partner", list(labels), format_func=labels.__getitem__)
     elif scope == ScenarioScope.SELECTED_MARKET:
         columns = st.columns(4)
         filter_options = {
@@ -641,7 +643,7 @@ def render_scenario_lab(
             if selected != "All":
                 filters[field] = selected
 
-    if st.button("Run Scenario", type="primary"):
+    if st.button("运行模拟 · Run Scenario", type="primary"):
         try:
             report = ScenarioService.run(
                 source_frame,
@@ -658,24 +660,24 @@ def render_scenario_lab(
         manager.mark_scenario_tested(*selected_ref)
         st.session_state["scenario_report"] = report
         st.session_state["selected_draft"] = selected_ref
-        st.success("Scenario completed. Active Policy and official partner results were not modified.")
+        st.success("Scenario 已完成；Active Policy 与正式 Partner Result 未被修改。")
 
     report = st.session_state.get("scenario_report")
     if report is None or (report.draft_policy_id, report.draft_version) != selected_ref:
         return
     summary = report.summary
     metrics = st.columns(5)
-    metrics[0].metric("Average Score Change", f"{summary.average_score_change:+.2f}")
-    metrics[1].metric("Partners Upgraded", summary.partners_upgraded)
-    metrics[2].metric("Partners Downgraded", summary.partners_downgraded)
+    metrics[0].metric("平均分变化 · Average Score Change", f"{summary.average_score_change:+.2f}")
+    metrics[1].metric("等级提升 · Partners Upgraded", summary.partners_upgraded)
+    metrics[2].metric("等级下降 · Partners Downgraded", summary.partners_downgraded)
     positive = summary.largest_positive_impact
     negative = summary.largest_negative_impact
     metrics[3].metric(
-        "Largest Positive",
+        "最大正向影响 · Largest Positive",
         f"{positive['partner_id']} {positive['score_change']:+.2f}" if positive else "N/A",
     )
     metrics[4].metric(
-        "Largest Negative",
+        "最大负向影响 · Largest Negative",
         f"{negative['partner_id']} {negative['score_change']:+.2f}" if negative else "N/A",
     )
 
@@ -697,18 +699,18 @@ def render_scenario_lab(
         y="partners",
         color="policy",
         barmode="group",
-        title="Tier count before / after",
+        title="等级变化前后对比 · Tier Count Before / After",
         text_auto=True,
     )
     st.plotly_chart(tier_chart, use_container_width=True)
     if summary.tier_migration:
-        st.write("Tier Migration", summary.tier_migration)
+        st.write("等级迁移 · Tier Migration", summary.tier_migration)
 
 
 def render_audit_log(manager: PolicyLifecycleManager) -> None:
-    st.subheader("Persistent Policy Audit Log")
+    st.subheader("持久化策略审计日志 · Persistent Policy Audit Log")
     if not manager.audit_records:
-        st.info("No policy lifecycle event has been recorded yet.")
+        st.info("尚未记录 Policy Lifecycle Event。")
         return
     st.dataframe(
         pd.DataFrame([record.model_dump() for record in manager.audit_records]),
@@ -718,8 +720,8 @@ def render_audit_log(manager: PolicyLifecycleManager) -> None:
 
 
 st.set_page_config(page_title="Adaptive Channel Governance", page_icon="◈", layout="wide")
-st.title("Adaptive Channel Governance")
-st.caption("Synthetic data · deterministic rules · explainable human decision support")
+st.title("自适应渠道治理与合作伙伴评分 · Adaptive Channel Governance")
+st.caption("Synthetic Data · Deterministic Rules · 可解释的 Human-in-the-loop 决策支持")
 
 if "policy_manager" not in st.session_state:
     st.session_state["policy_manager"] = PolicyLifecycleManager.from_yaml_and_sqlite(
@@ -737,13 +739,13 @@ evaluation_map = {
 
 overview_tab, management_tab, partner_tab, quality_tab, policy_tab, scenario_tab, audit_tab = st.tabs(
     [
-        "Executive overview",
-        "Partner Management",
-        "Partner 360",
-        "Data quality",
-        "Policy Studio",
-        "Scenario Lab",
-        "Audit Log",
+        "渠道总览\nExecutive Overview",
+        "合作伙伴管理\nPartner Management",
+        "合作伙伴全景分析\nPartner 360",
+        "数据质量\nData Quality",
+        "策略配置中心\nPolicy Studio",
+        "策略模拟实验室\nScenario Lab",
+        "审计日志\nAudit Log",
     ]
 )
 with overview_tab:
