@@ -1,0 +1,142 @@
+version: "1.2.0"
+policies:
+  - policy_id: POL-DEFAULT
+    version: 1
+    status: ACTIVE
+    priority: 0
+    match: {}
+    pillar_weights: &default_pillars
+      COMMERCIAL_PERFORMANCE: 0.25
+      MARKET_CAPABILITY: 0.15
+      OPERATIONAL_HEALTH: 0.20
+      FINANCIAL_HEALTH: 0.15
+      SERVICE_TECH_CAPABILITY: 0.15
+      COMPLIANCE_GOVERNANCE: 0.10
+    metrics: &base_metrics
+      target_achievement_pct: {pillar: COMMERCIAL_PERFORMANCE, method: linear, bad: 50, good: 110, weight: 0.40}
+      yoy_growth_pct: {pillar: COMMERCIAL_PERFORMANCE, method: linear, bad: -20, good: 30, weight: 0.35}
+      new_product_contribution_pct: {pillar: COMMERCIAL_PERFORMANCE, method: linear, bad: 0, good: 30, weight: 0.25}
+      active_dealers: {pillar: MARKET_CAPABILITY, method: linear, bad: 0, good: 30, weight: 0.50}
+      geographic_coverage_pct: {pillar: MARKET_CAPABILITY, method: linear, bad: 20, good: 90, weight: 0.50}
+      inventory_days: {pillar: OPERATIONAL_HEALTH, method: optimal_band, low: 45, high: 90, hard_low: 0, hard_high: 180, weight: 0.40}
+      sell_out_performance_pct: {pillar: OPERATIONAL_HEALTH, method: linear, bad: 50, good: 110, weight: 0.35}
+      forecast_accuracy_pct: {pillar: OPERATIONAL_HEALTH, method: linear, bad: 40, good: 90, weight: 0.15}
+      data_reporting_quality_pct: {pillar: OPERATIONAL_HEALTH, method: linear, bad: 40, good: 100, weight: 0.10}
+      payment_on_time_pct: {pillar: FINANCIAL_HEALTH, method: linear, bad: 50, good: 98, weight: 0.60}
+      ar_overdue_90d_pct: {pillar: FINANCIAL_HEALTH, method: inverse_linear, good: 0, bad: 30, weight: 0.40}
+      certified_engineers: {pillar: SERVICE_TECH_CAPABILITY, method: linear, bad: 0, good: 5, weight: 0.40}
+      training_completion_pct: {pillar: SERVICE_TECH_CAPABILITY, method: linear, bad: 20, good: 95, weight: 0.30}
+      demo_capability: {pillar: SERVICE_TECH_CAPABILITY, method: boolean, weight: 0.30}
+      pricing_violations: {pillar: COMPLIANCE_GOVERNANCE, method: inverse_linear, good: 0, bad: 3, weight: 0.40}
+      unauthorized_sales_incidents: {pillar: COMPLIANCE_GOVERNANCE, method: inverse_linear, good: 0, bad: 2, weight: 0.60}
+    thresholds: &base_thresholds
+      minimum_confidence: 0.70
+      inventory_days_low: 45
+      inventory_days_high: 90
+      ar_overdue_90d_high_pct: 20
+      data_quality_low_pct: 60
+      new_product_benchmark_pct: 20
+      pipeline_coverage_supported: 1.5
+      pipeline_coverage_stretch: 0.8
+      max_historical_growth_deviation: 20
+      minimum_target_confidence: 0.60
+    tier_rules: &base_tiers {STRATEGIC: 90, CORE: 75, DEVELOPMENT: 60}
+
+  - policy_id: POL-LIFECYCLE-EMERGING
+    version: 1
+    status: ACTIVE
+    priority: 10
+    match: {lifecycle_stage: EMERGING}
+    pillar_weights:
+      COMMERCIAL_PERFORMANCE: 0.15
+      MARKET_CAPABILITY: 0.25
+      OPERATIONAL_HEALTH: 0.10
+      FINANCIAL_HEALTH: 0.10
+      SERVICE_TECH_CAPABILITY: 0.30
+      COMPLIANCE_GOVERNANCE: 0.10
+    metrics: *base_metrics
+    thresholds: *base_thresholds
+    tier_rules: *base_tiers
+
+  - policy_id: POL-LIFECYCLE-MATURE
+    version: 1
+    status: ACTIVE
+    priority: 10
+    match: {lifecycle_stage: MATURE}
+    pillar_weights:
+      COMMERCIAL_PERFORMANCE: 0.25
+      MARKET_CAPABILITY: 0.10
+      OPERATIONAL_HEALTH: 0.25
+      FINANCIAL_HEALTH: 0.20
+      SERVICE_TECH_CAPABILITY: 0.10
+      COMPLIANCE_GOVERNANCE: 0.10
+    metrics: *base_metrics
+    thresholds: *base_thresholds
+    tier_rules: *base_tiers
+
+  - policy_id: POL-AGR-MATURE
+    version: 1
+    status: ACTIVE
+    priority: 20
+    match: {business_line: AGRICULTURE, lifecycle_stage: MATURE}
+    pillar_weights:
+      COMMERCIAL_PERFORMANCE: 0.25
+      MARKET_CAPABILITY: 0.10
+      OPERATIONAL_HEALTH: 0.25
+      FINANCIAL_HEALTH: 0.15
+      SERVICE_TECH_CAPABILITY: 0.15
+      COMPLIANCE_GOVERNANCE: 0.10
+    metrics: *base_metrics
+    thresholds: *base_thresholds
+    tier_rules: *base_tiers
+
+  - policy_id: POL-AGR-MATURE-HV-DIST
+    version: 1
+    status: ACTIVE
+    priority: 30
+    match: {business_line: AGRICULTURE, lifecycle_stage: MATURE, market_tier: HIGH_VALUE, partner_type: DISTRIBUTOR}
+    pillar_weights:
+      COMMERCIAL_PERFORMANCE: 0.25
+      MARKET_CAPABILITY: 0.10
+      OPERATIONAL_HEALTH: 0.25
+      FINANCIAL_HEALTH: 0.15
+      SERVICE_TECH_CAPABILITY: 0.15
+      COMPLIANCE_GOVERNANCE: 0.10
+    metrics: *base_metrics
+    thresholds: *base_thresholds
+    tier_rules: *base_tiers
+
+  - policy_id: POL-AGR-GROWTH-HV-DIST
+    version: 1
+    status: ACTIVE
+    priority: 30
+    match: {business_line: AGRICULTURE, lifecycle_stage: GROWTH, market_tier: HIGH_VALUE, partner_type: DISTRIBUTOR}
+    pillar_weights:
+      COMMERCIAL_PERFORMANCE: 0.20
+      MARKET_CAPABILITY: 0.25
+      OPERATIONAL_HEALTH: 0.15
+      FINANCIAL_HEALTH: 0.10
+      SERVICE_TECH_CAPABILITY: 0.20
+      COMPLIANCE_GOVERNANCE: 0.10
+    metrics: *base_metrics
+    thresholds: *base_thresholds
+    tier_rules: *base_tiers
+
+  - policy_id: POL-AGR-GROWTH-HV-DIST-PL
+    version: 1
+    status: ACTIVE
+    priority: 40
+    match: {business_line: AGRICULTURE, lifecycle_stage: GROWTH, market_tier: HIGH_VALUE, partner_type: DISTRIBUTOR, country_code: PL}
+    pillar_weights:
+      COMMERCIAL_PERFORMANCE: 0.25
+      MARKET_CAPABILITY: 0.20
+      OPERATIONAL_HEALTH: 0.20
+      FINANCIAL_HEALTH: 0.10
+      SERVICE_TECH_CAPABILITY: 0.15
+      COMPLIANCE_GOVERNANCE: 0.10
+    metrics:
+      <<: *base_metrics
+      inventory_days: {pillar: OPERATIONAL_HEALTH, method: optimal_band, low: 45, high: 90, hard_low: 0, hard_high: 180, weight: 0.30}
+      sell_out_performance_pct: {pillar: OPERATIONAL_HEALTH, method: linear, bad: 50, good: 110, weight: 0.45}
+    thresholds: *base_thresholds
+    tier_rules: {STRATEGIC: 88, CORE: 72, DEVELOPMENT: 58}

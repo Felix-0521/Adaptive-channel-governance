@@ -1,0 +1,341 @@
+"""Canonical input and output contracts."""
+
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class LifecycleStage(StrEnum):
+    ENTRY = "ENTRY"
+    BUILD = "BUILD"
+    EMERGING = "EMERGING"
+    GROWTH = "GROWTH"
+    MATURE = "MATURE"
+    MAINTENANCE = "MAINTENANCE"
+    DECLINE = "DECLINE"
+
+
+class PartnerType(StrEnum):
+    DISTRIBUTOR = "DISTRIBUTOR"
+    DEALER = "DEALER"
+
+
+class MarketTier(StrEnum):
+    HIGH_VALUE = "HIGH_VALUE"
+    GROWTH_VALUE = "GROWTH_VALUE"
+    DEVELOPING = "DEVELOPING"
+
+
+class Pillar(StrEnum):
+    COMMERCIAL_PERFORMANCE = "COMMERCIAL_PERFORMANCE"
+    MARKET_CAPABILITY = "MARKET_CAPABILITY"
+    OPERATIONAL_HEALTH = "OPERATIONAL_HEALTH"
+    FINANCIAL_HEALTH = "FINANCIAL_HEALTH"
+    SERVICE_TECH_CAPABILITY = "SERVICE_TECH_CAPABILITY"
+    COMPLIANCE_GOVERNANCE = "COMPLIANCE_GOVERNANCE"
+
+
+class RiskSeverity(StrEnum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class GovernanceStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    MONITOR = "MONITOR"
+    REVIEW = "REVIEW"
+    HOLD = "HOLD"
+
+
+class PolicyStatus(StrEnum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
+class ScenarioScope(StrEnum):
+    SINGLE_PARTNER = "SINGLE_PARTNER"
+    SELECTED_MARKET = "SELECTED_MARKET"
+    FULL_PORTFOLIO = "FULL_PORTFOLIO"
+
+
+class ActionPriority(StrEnum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class InsightSeverity(StrEnum):
+    INFO = "INFO"
+    ATTENTION = "ATTENTION"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+
+
+class DriverDirection(StrEnum):
+    NEGATIVE = "NEGATIVE"
+    POSITIVE = "POSITIVE"
+    GOVERNANCE = "GOVERNANCE"
+
+
+class TargetAssessment(StrEnum):
+    SUPPORTED = "SUPPORTED"
+    STRETCH = "STRETCH"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+
+
+class RecommendedActionType(StrEnum):
+    BRANDING_MDF = "BRANDING_MDF"
+    ENGINEER_SUPPORT = "ENGINEER_SUPPORT"
+    DEMO_SUPPORT = "DEMO_SUPPORT"
+    TRAINING_CERTIFICATION = "TRAINING_CERTIFICATION"
+    NEW_PRODUCT_ENABLEMENT = "NEW_PRODUCT_ENABLEMENT"
+    CHANNEL_EXPANSION = "CHANNEL_EXPANSION"
+    JOINT_BUSINESS_PLANNING = "JOINT_BUSINESS_PLANNING"
+    AFTERSALES_CAPABILITY = "AFTERSALES_CAPABILITY"
+    INVENTORY_OPTIMIZATION = "INVENTORY_OPTIMIZATION"
+    CREDIT_REVIEW = "CREDIT_REVIEW"
+    DATA_QUALITY_IMPROVEMENT = "DATA_QUALITY_IMPROVEMENT"
+    CORRECTIVE_ACTION_PLAN = "CORRECTIVE_ACTION_PLAN"
+    COMPLIANCE_REVIEW = "COMPLIANCE_REVIEW"
+    NO_ADDITIONAL_SUPPORT = "NO_ADDITIONAL_SUPPORT"
+
+
+class PartnerRecord(BaseModel):
+    """Synthetic partner observation. Optional metrics preserve missingness."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    partner_id: str = Field(min_length=1)
+    partner_name: str = Field(min_length=1)
+    business_line: str = Field(min_length=1)
+    country_code: str = Field(min_length=2, max_length=2)
+    region: str | None = None
+    lifecycle_stage: LifecycleStage
+    market_tier: MarketTier
+    partner_type: PartnerType
+    annual_revenue: float | None = Field(default=None, ge=0)
+    target_achievement_pct: float | None = Field(default=None, ge=0, le=300)
+    yoy_growth_pct: float | None = Field(default=None, ge=-100, le=500)
+    new_product_contribution_pct: float | None = Field(default=None, ge=0, le=100)
+    active_dealers: int | None = Field(default=None, ge=0)
+    geographic_coverage_pct: float | None = Field(default=None, ge=0, le=100)
+    inventory_days: float | None = Field(default=None, ge=0, le=730)
+    sell_out_performance_pct: float | None = Field(default=None, ge=0, le=200)
+    forecast_accuracy_pct: float | None = Field(default=None, ge=0, le=100)
+    payment_on_time_pct: float | None = Field(default=None, ge=0, le=100)
+    ar_overdue_90d_pct: float | None = Field(default=None, ge=0, le=100)
+    certified_engineers: int | None = Field(default=None, ge=0)
+    training_completion_pct: float | None = Field(default=None, ge=0, le=100)
+    demo_capability: bool | None = None
+    data_reporting_quality_pct: float | None = Field(default=None, ge=0, le=100)
+    pricing_violations: int | None = Field(default=None, ge=0)
+    unauthorized_sales_incidents: int | None = Field(default=None, ge=0)
+    sanctions_match: bool | None = None
+    material_contract_breach: bool | None = None
+
+    @field_validator("country_code")
+    @classmethod
+    def uppercase_country(cls, value: str) -> str:
+        return value.upper()
+
+
+class MetricRule(BaseModel):
+    pillar: Pillar
+    method: str
+    weight: float = Field(gt=0, le=1)
+    good: float | None = None
+    bad: float | None = None
+    low: float | None = None
+    high: float | None = None
+    hard_low: float | None = None
+    hard_high: float | None = None
+
+
+class Policy(BaseModel):
+    policy_id: str
+    version: int = Field(default=1, ge=1)
+    status: PolicyStatus = PolicyStatus.ACTIVE
+    scenario_tested: bool = False
+    base_version: int | None = None
+    priority: int = 0
+    match: dict[str, str] = Field(default_factory=dict)
+    pillar_weights: dict[Pillar, float] = Field(default_factory=dict)
+    metrics: dict[str, MetricRule] = Field(default_factory=dict)
+    thresholds: dict[str, float] = Field(default_factory=dict)
+    tier_rules: dict[str, float] = Field(
+        default_factory=lambda: {"STRATEGIC": 90, "CORE": 75, "DEVELOPMENT": 60}
+    )
+    source_label: str = ""
+    selection_level: str = ""
+
+
+class AuditRecord(BaseModel):
+    timestamp: str
+    policy_id: str
+    old_version: int | None
+    new_version: int
+    actor: str
+    change_reason: str
+    action: str = "ACTIVATE"
+    entity: str = "POLICY"
+    old_value: dict[str, Any] = Field(default_factory=dict)
+    new_value: dict[str, Any] = Field(default_factory=dict)
+    reason: str = ""
+    version: int | None = None
+
+
+class RecommendedAction(BaseModel):
+    action: RecommendedActionType
+    priority: ActionPriority
+    reason: str
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    human_review_required: bool = True
+
+
+class ScenarioComparison(BaseModel):
+    partner_id: str
+    partner_name: str
+    baseline_score: float | None
+    scenario_score: float | None
+    score_change: float | None
+    baseline_tier: str
+    scenario_tier: str
+    baseline_risk: str
+    scenario_risk: str
+    baseline_governance_status: str
+    scenario_governance_status: str
+
+
+class ScenarioSummary(BaseModel):
+    average_score_change: float
+    partners_upgraded: int
+    partners_downgraded: int
+    tier_migration: dict[str, int]
+    largest_positive_impact: dict[str, float | str] | None
+    largest_negative_impact: dict[str, float | str] | None
+    tier_counts_before: dict[str, int]
+    tier_counts_after: dict[str, int]
+
+
+class ScenarioReport(BaseModel):
+    scope: ScenarioScope
+    draft_policy_id: str
+    draft_version: int
+    comparisons: list[ScenarioComparison]
+    summary: ScenarioSummary
+
+
+class RiskFlag(BaseModel):
+    code: str
+    severity: RiskSeverity
+    message: str
+    evidence: dict[str, Any] = Field(default_factory=dict)
+
+
+class EvaluationResult(BaseModel):
+    partner_id: str
+    policy_id: str
+    policy_version: int
+    policy_source: str
+    score: float | None
+    confidence: float
+    pillar_scores: dict[str, float | None]
+    metric_scores: dict[str, float | None]
+    tier: str
+    risks: list[RiskFlag]
+    gate_codes: list[str]
+    governance_status: GovernanceStatus
+    recommended_actions: list[RecommendedAction]
+
+
+class InsightDriver(BaseModel):
+    rank: int = Field(ge=1)
+    category: str
+    direction: DriverDirection
+    metric: str
+    current_value: Any = None
+    benchmark: str
+    impact: float | None = None
+    explanation: str
+
+
+class ManagementInsight(BaseModel):
+    severity: InsightSeverity
+    executive_summary: str
+    key_drivers: list[InsightDriver]
+    management_attention: str
+    recommended_next_step: str
+    data_limitations: list[str]
+    source: str = "RULES_BASED"
+
+
+class AIInsightNarrative(BaseModel):
+    """AI-editable prose only; severity and ranked evidence stay deterministic."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    executive_summary: str
+    management_attention: str
+    recommended_next_step: str
+    data_limitations: list[str]
+
+
+class StructuredManagementContext(BaseModel):
+    """Explicit provider whitelist; domain objects and raw rows cannot cross this boundary."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    partner_name: str
+    business_line: str
+    lifecycle_stage: str
+    score: float | None
+    confidence: float
+    tier: str
+    risk_level: str
+    governance_status: str
+    policy_source: str
+    gate_codes: tuple[str, ...]
+    key_negative_drivers: tuple[dict[str, Any], ...]
+    key_positive_drivers: tuple[dict[str, Any], ...]
+    recommended_actions: tuple[dict[str, Any], ...]
+    deterministic_insight: dict[str, Any]
+
+
+class TargetRationaleInput(BaseModel):
+    current_revenue: float | None = Field(default=None, ge=0)
+    proposed_target: float | None = Field(default=None, gt=0)
+    historical_growth_pct: float | None = None
+    current_sell_out_pct: float | None = Field(default=None, ge=0)
+    lifecycle_stage: LifecycleStage
+    market_capability_score: float | None = Field(default=None, ge=0, le=100)
+    pipeline_value: float | None = Field(default=None, ge=0)
+    new_customer_plan: int | None = Field(default=None, ge=0)
+    coverage_pct: float | None = Field(default=None, ge=0, le=100)
+    new_product_potential_pct: float | None = Field(default=None, ge=0, le=100)
+    resource_commitment: bool | None = None
+    inventory_days: float | None = Field(default=None, ge=0)
+    ar_overdue_90d_pct: float | None = Field(default=None, ge=0, le=100)
+    risk_level: RiskSeverity = RiskSeverity.LOW
+    gate_codes: tuple[str, ...] = ()
+
+
+class TargetRationale(BaseModel):
+    proposed_target: float | None
+    required_growth_pct: float | None
+    historical_growth_reference_pct: float | None
+    pipeline_coverage_ratio: float | None
+    target_vs_current_revenue: float | None
+    target_vs_sell_out_trend_pct: float | None
+    assessment: TargetAssessment
+    confidence: float
+    supporting_drivers: list[str]
+    constraining_drivers: list[str]
+    required_assumptions: list[str]
+    management_review: str
