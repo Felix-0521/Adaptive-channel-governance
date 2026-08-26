@@ -197,15 +197,45 @@ DEMO_SUPPORT      — HIGH
 
 ## 产品界面
 
-- **渠道总览 · Executive Overview**：Partner 数量、平均分、高风险、Review Worklist，以及 Tier/Risk/Lifecycle 分布；
-- **合作伙伴管理 · Partner Management**：创建 Partner、CSV Validation/Preview/Import 与自动刷新；
-- **合作伙伴全景分析 · Partner 360**：Context → Score/Confidence/Tier/Risk/Status → Pillar → Insight → Action → Target；
-- **策略配置中心 · Policy Studio**：Country Override、Pillar Weight、可展开 Metric Weight 和 Draft/Activate；
-- **策略模拟实验室 · Scenario Lab**：三个 Scope 的 Baseline vs Scenario；
-- **数据质量 · Data Quality**：显示缺失字段如何影响 Confidence；
-- **审计日志 · Audit Log**：显示 SQLite 持久化的 Policy 生命周期事件。
+**流程化 Tab 顺序（业务流程：数据输入 → 分析 → 决策 → 模拟 → 审计）：**
 
-## 5 分钟本地运行
+1. **数据中心 · Data Center** — 下载模板、上传 Excel、数据校验、规范化、评估运行
+2. **渠道总览 · Channel Overview** — Executive Dashboard，6 KPI，回答"渠道健康状态如何？"
+3. **合作伙伴全景分析 · Partner 360** — 为什么这个 Partner 是这个结果？下一步应该做什么？
+4. **策略配置中心 · Policy Studio** — Country Override、Two-level Weight、Draft → Activate
+5. **策略模拟实验室 · Scenario Lab** — 三个 Scope 的 Baseline vs Scenario 对比
+6. **审计日志 · Audit Log** — SQLite 持久化的 Policy 生命周期事件
+
+历史 Tab（可通过侧栏访问）：
+- **合作伙伴管理 · Partner Management** — 创建 Partner、CSV Validation/Preview/Import
+- **数据质量 · Data Quality** — 缺失字段如何影响 Confidence
+
+## 5 分钟演示流程
+
+快速体验完整渠道治理分析流程：
+
+**Minute 0-1 · Business Problem**
+打开应用，直接进入 **Data Center**。页面说明：渠道管理面临数据分散、标准不一致、经验依赖等问题。本系统将渠道数据转化为可配置、可解释、可测试的治理决策。
+
+**Minute 1-2 · Upload Partner Data**
+点击 **模板下载** 下载 7 个 Excel 模板（或直接使用 Synthetic Portfolio）。点击 **数据上传与评估 → 运行数据验证**。系统展示 Import Summary：检测到合作伙伴数量、警告数（非阻塞）、错误数（阻塞）、数据质量分。
+
+**Minute 2-3 · Partner Evaluation**
+点击 **执行评估**。系统对每个 Partner 调用评分引擎：Metric Score × Weight → Pillar Score → Partner Score。同时计算 Confidence、Risk Severity、Gate Signal、Tier、Governance Status、Recommended Action。评估完成后展示评分分布直方图与风险分布饼图。
+
+**Minute 3-4 · Partner 360 Deep Dive**
+进入 **Partner 360**。选择任意 Partner，按固定阅读路径查看：
+- 合作伙伴档案（谁）
+- 评分总览（得了几分）
+- 维度评分拆解（如何得出分数）
+- 管理洞察（为什么是这个结果）
+- 风险信号 + 管理建议（应该做什么）
+- 目标合理性分析（拟议目标是否合理）
+
+**Minute 4-5 · Policy Scenario & Management Insight**
+进入 **Policy Studio** 修改权重（例：将 Financial Health 从 15% 调至 25%），保存为 Draft。进入 **Scenario Lab**，选择 Full Portfolio Scope，对比 Baseline vs Scenario。观察哪些 Partner 的 Tier 发生了变化，哪些 Partner 升级，哪些 Partner 降级。
+
+
 
 Python 3.12 是标准运行环境。
 
@@ -283,10 +313,10 @@ tests/                         Pytest unit and integration tests
 
 | 指标 | 最终结果 |
 |---|---:|
-| Python Product Code | 2,545 LOC |
-| Total Python + Tests | 3,474 LOC |
-| Python Files | 31 |
-| Automated Tests | 73 passed |
+| Python Product Code | ~2,700 LOC |
+| Total Python + Tests | ~3,600 LOC |
+| Python Files | 30+ |
+| Automated Tests | **163 passed** |
 | Fresh-clone Validation | Passed |
 | Streamlit Startup Check | Passed |
 | Core AI API Requirement | None |
