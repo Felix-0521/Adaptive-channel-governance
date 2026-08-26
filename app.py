@@ -36,6 +36,7 @@ from channel_governance.storage import SQLitePartnerStore
 from channel_governance.target_rationale import assess_target
 from channel_governance.template_schema import TEMPLATES
 from channel_governance.validation import require_valid_dataframe
+from channel_governance.ui_theme import apply_visual_theme
 
 
 POLICY_PATH = ROOT / "config" / "scoring_rules.yaml"
@@ -1102,6 +1103,7 @@ def render_data_center(policy_repository) -> None:
 
 
 st.set_page_config(page_title="Adaptive Channel Governance", page_icon="◈", layout="wide")
+apply_visual_theme()
 st.title("自适应渠道治理与合作伙伴评分 · Adaptive Channel Governance")
 st.caption("Synthetic Data · Deterministic Rules · 可解释的 Human-in-the-loop 决策支持")
 
