@@ -289,6 +289,39 @@ def apply_visual_theme() -> None:
           [data-testid="stMetric"] { min-height: 96px; }
         }
 
+
+        /* Chinese-first readability: allow long bilingual labels to wrap safely. */
+        [data-testid="stMetric"] {
+          min-width: 0;
+          min-height: 118px;
+        }
+        [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p,
+        [data-testid="stMetricValue"], [data-testid="stMetricValue"] div {
+          white-space: normal !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-word !important;
+        }
+        [data-testid="column"] { min-width: 0 !important; }
+        .stButton > button p, .stDownloadButton > button p {
+          white-space: normal !important;
+          overflow-wrap: anywhere !important;
+          line-height: 1.35 !important;
+          text-align: center;
+        }
+        [data-testid="stExpander"] summary p,
+        [data-baseweb="select"] span,
+        [data-baseweb="input"] input {
+          overflow-wrap: anywhere !important;
+        }
+        @media (max-width: 1180px) {
+          [data-testid="stMetricValue"], [data-testid="stMetricValue"] div {
+            font-size: 23px !important;
+          }
+          [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p {
+            font-size: 12px !important;
+          }
+        }
+
         /* Preserve Streamlit Material Symbol glyphs. */
         [data-testid="stIconMaterial"],
         [data-testid="stIconMaterial"] span,

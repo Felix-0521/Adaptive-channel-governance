@@ -37,6 +37,28 @@ from channel_governance.target_rationale import assess_target
 from channel_governance.template_schema import TEMPLATES
 from channel_governance.validation import require_valid_dataframe
 from channel_governance.ui_theme import apply_visual_theme
+from channel_governance.display_labels import (
+    action_label,
+    action_reason,
+    business_line_label,
+    format_evidence,
+    gate_label,
+    governance_label,
+    insight_severity_label,
+    lifecycle_label,
+    localize_text,
+    market_tier_label,
+    metric_label,
+    partner_type_label,
+    pillar_label,
+    priority_label,
+    risk_code_label,
+    risk_label,
+    risk_message,
+    scenario_scope_label,
+    target_assessment_label,
+    tier_label,
+)
 
 
 POLICY_PATH = ROOT / "config" / "scoring_rules.yaml"
@@ -101,8 +123,8 @@ def clear_active_dataset() -> None:
 
 def render_dataset_empty_state(feature_name: str) -> None:
     st.info(
-        f"尚未加载业务数据 · No active dataset for {feature_name}. "
-        "请前往 Data Center 上传业务模板，或手动加载 Synthetic Demo Dataset。"
+        f"{feature_name} 暂无可分析的数据。请先前往【数据中心】上传并确认业务数据，"
+        "或手动加载演示数据集。"
     )
 
 
@@ -226,6 +248,12 @@ def render_overview(results: pd.DataFrame) -> None:
     has_action = results[action_col].apply(lambda x: bool(x))
     action_count = int(has_action.sum())
 
+    display_results = results.copy()
+    display_results["等级"] = display_results["tier"].map(tier_label)
+    display_results["风险等级"] = display_results["risk_level"].map(risk_label)
+    display_results["治理状态"] = display_results["governance_status"].map(governance_label)
+    display_results["生命周期"] = display_results["lifecycle_stage"].map(lifecycle_label)
+
     st.markdown("##### 渠道健康仪表板 · Channel Health Dashboard")
     row1 = st.columns(6)
     row1[0].metric("合作伙伴总数\nTotal Partners", len(results))
@@ -233,16 +261,13 @@ def render_overview(results: pd.DataFrame) -> None:
     row1[2].metric("高/严重风险\nHigh / Critical Risk", high_risk)
     row1[3].metric("需要复核\nReview Required", review_required)
     row1[4].metric("活跃治理状态\nActive Governance", active_count)
-    row1[5].metric("待处理建议\nRecommended Actions", action_count)
+    row1[5].metric("有管理建议\nRecommended Actions", action_count)
 
     # Governance status distribution
     status_counts = results["governance_status"].value_counts()
     gov_colors = {"ACTIVE": "#2E7D32", "MONITOR": "#ED9B25", "REVIEW": "#D66B2C", "HOLD": "#B3261E"}
     gov_data = status_counts.rename_axis("status").reset_index(name="count")
-    gov_data["status_display"] = gov_data["status"].map({
-        "ACTIVE": "活跃 Active", "MONITOR": "监控 Monitor",
-        "REVIEW": "复核 Review", "HOLD": "暂停 Hold",
-    })
+    gov_data["status_display"] = gov_data["status"].map(governance_label)
     gov_fig = px.bar(
         gov_data, x="status_display", y="count", color="status",
         color_discrete_map=gov_colors, title="治理状态分布 · Governance Status Distribution",
@@ -259,40 +284,43 @@ def render_overview(results: pd.DataFrame) -> None:
         "HOLD": "#B3261E",
     }
     score_chart = px.bar(
-        results.sort_values("score", ascending=True),
+        display_results.sort_values("score", ascending=True),
         x="score",
         y="partner_name",
-        color="governance_status",
+        color="治理状态",
         orientation="h",
-        color_discrete_map=status_colors,
+        color_discrete_map={governance_label(k): v for k, v in status_colors.items()},
         labels={"score": "合作伙伴评分 · Partner Score", "partner_name": "合作伙伴 · Partner"},
         title="合作伙伴评分与治理状态 · Partner Score & Governance Status",
-        hover_data=["policy_id", "confidence", "tier", "risk_codes"],
+        hover_data=["policy_id", "confidence", "等级", "风险等级"],
     )
-    score_chart.update_layout(legend_title_text="Status", height=max(460, len(results) * 22))
+    score_chart.update_layout(legend_title_text="治理状态", height=max(460, len(results) * 22))
     st.plotly_chart(score_chart, use_container_width=True)
 
     col_layout = st.columns(3)
     tier_counts = results["tier"].value_counts().rename_axis("tier").reset_index(name="partners")
+    tier_counts["等级"] = tier_counts["tier"].map(tier_label)
     tier_chart = px.bar(
-        tier_counts, x="tier", y="partners", color="tier",
+        tier_counts, x="等级", y="partners", color="等级",
         title="合作伙伴等级分布 · Partner Tier Distribution", text_auto=True,
     )
     tier_chart.update_layout(showlegend=False, height=260)
     col_layout[0].plotly_chart(tier_chart, use_container_width=True)
 
     risk_counts = results["risk_level"].value_counts().rename_axis("risk").reset_index(name="partners")
+    risk_counts["风险等级"] = risk_counts["risk"].map(risk_label)
     risk_chart = px.bar(
-        risk_counts, x="risk", y="partners", color="risk",
+        risk_counts, x="风险等级", y="partners", color="风险等级",
         title="风险分布 · Risk Distribution", text_auto=True,
-        color_discrete_map={"LOW": "#2E7D32", "MEDIUM": "#ED9B25", "HIGH": "#D66B2C", "CRITICAL": "#B3261E"},
+        color_discrete_map={risk_label("LOW"): "#2E7D32", risk_label("MEDIUM"): "#ED9B25", risk_label("HIGH"): "#D66B2C", risk_label("CRITICAL"): "#B3261E"},
     )
     risk_chart.update_layout(showlegend=False, height=260)
     col_layout[1].plotly_chart(risk_chart, use_container_width=True)
 
     lifecycle_counts = results["lifecycle_stage"].value_counts().rename_axis("lifecycle").reset_index(name="partners")
+    lifecycle_counts["生命周期"] = lifecycle_counts["lifecycle"].map(lifecycle_label)
     lc_chart = px.bar(
-        lifecycle_counts, x="lifecycle", y="partners", color="lifecycle",
+        lifecycle_counts, x="生命周期", y="partners", color="生命周期",
         title="生命周期分布 · Lifecycle Distribution", text_auto=True,
     )
     lc_chart.update_layout(showlegend=False, height=260)
@@ -300,13 +328,20 @@ def render_overview(results: pd.DataFrame) -> None:
 
     st.subheader("治理工作清单 · Governance Worklist")
     st.caption("按治理状态与评分排序 · Sorted by governance status and score")
+    worklist = display_results.sort_values(["governance_status", "score"], ascending=[False, True])[
+        ["partner_name", "business_line", "country_code", "score", "confidence", "等级", "风险等级", "治理状态"]
+    ].rename(columns={
+        "partner_name": "合作伙伴", "business_line": "业务线", "country_code": "国家",
+        "score": "评分", "confidence": "置信度",
+    })
+    worklist["业务线"] = worklist["业务线"].map(business_line_label)
     st.dataframe(
-        results.sort_values(["governance_status", "score"], ascending=[False, True]),
+        worklist,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "score": st.column_config.NumberColumn(format="%.1f"),
-            "confidence": st.column_config.ProgressColumn(min_value=0, max_value=1, format="%.0f%%"),
+            "评分": st.column_config.NumberColumn(format="%.1f"),
+            "置信度": st.column_config.ProgressColumn(min_value=0, max_value=1, format="%.0f%%"),
         },
     )
 
@@ -349,12 +384,12 @@ def render_partner_360(partners, evaluations, policies) -> None:
     col_p1, col_p2 = st.columns(2)
     col_p1.markdown(
         f"**{partner.partner_name}**  \n"
-        f"{partner.business_line} · {partner.country_code} · {partner.partner_type.value}"
+        f"{business_line_label(partner.business_line)} · {partner.country_code} · {partner_type_label(partner.partner_type)}"
     )
     col_p2.markdown(
-        f"Lifecycle: **{partner.lifecycle_stage.value}**  \n"
-        f"Market Tier: **{partner.market_tier.value}**  \n"
-        f"Policy: `{result.policy_id}` v{result.policy_version}"
+        f"生命周期：**{lifecycle_label(partner.lifecycle_stage)}**  \n"
+        f"市场等级：**{market_tier_label(partner.market_tier)}**  \n"
+        f"适用策略：`{result.policy_id}` v{result.policy_version}"
     )
 
     # ── 3. Score Overview ────────────────────────────────────────────────
@@ -363,15 +398,15 @@ def render_partner_360(partners, evaluations, policies) -> None:
     sc1.metric("合作伙伴评分\nPartner Score",
                 f"{result.score:.1f}" if result.score is not None else "N/A")
     sc2.metric("数据置信度\nConfidence", f"{result.confidence:.0%}")
-    sc3.metric("合作伙伴等级\nPartner Tier", result.tier.title())
-    sc4.metric("风险等级\nRisk Level", risk_level.title())
-    sc5.metric("治理状态\nGovernance Status", result.governance_status.value.title())
+    sc3.metric("合作伙伴等级\nPartner Tier", tier_label(result.tier))
+    sc4.metric("风险等级\nRisk Level", risk_label(risk_level))
+    sc5.metric("治理状态\nGovernance Status", governance_label(result.governance_status))
 
     # ── 4. Pillar Breakdown ─────────────────────────────────────────────
     st.markdown("#### 🔍 维度评分拆解 · Pillar Breakdown")
     breakdown = pd.DataFrame(
         [
-            {"维度 Pillar": pillar.replace("_", " ").title(), "评分 Score": score}
+            {"治理维度": pillar_label(pillar), "评分": score}
             for pillar, score in result.pillar_scores.items()
             if score is not None
         ]
@@ -379,10 +414,10 @@ def render_partner_360(partners, evaluations, policies) -> None:
     if not breakdown.empty:
         chart = px.bar(
             breakdown,
-            x="维度 Pillar",
-            y="评分 Score",
+            x="治理维度",
+            y="评分",
             range_y=[0, 100],
-            color="评分 Score",
+            color="评分",
             color_continuous_scale="RdYlGn",
             title="各维度得分 · Pillar Scores",
             text_auto=".1f",
@@ -395,6 +430,7 @@ def render_partner_360(partners, evaluations, policies) -> None:
     insight_options = ["Rules-based", "AI-enhanced"] if ai_provider.available else ["Rules-based"]
     insight_mode = st.radio(
         "洞察模式 · Insight Mode", insight_options, horizontal=True,
+        format_func=lambda value: "规则解释 · Rules-based" if value == "Rules-based" else "AI 辅助解释 · AI-enhanced",
     )
     st.caption(
         "AI Insight：已禁用 · OPENAI_API_KEY 不可用。"
@@ -409,30 +445,30 @@ def render_partner_360(partners, evaluations, policies) -> None:
     # ── 5. Management Insight ────────────────────────────────────────────
     st.markdown("#### 💡 管理洞察 · Management Insight")
     st.caption(
-        f"模式 Mode: **{insight.source.replace('_', ' ').title()}** · "
-        f"严重程度 Severity: **{insight.severity.value}**"
+        f"生成方式：**{'规则引擎 · Rules-based' if 'RULE' in insight.source.upper() else 'AI 辅助 · AI-enhanced'}** · "
+        f"关注级别：**{insight_severity_label(insight.severity)}**"
     )
     with st.container(border=True):
         st.markdown("**摘要 · Executive Summary**")
-        st.write(insight.executive_summary)
+        st.write(localize_text(insight.executive_summary))
 
     with st.expander("关键驱动因素 · Key Drivers", expanded=False):
         for driver in insight.key_drivers:
             st.markdown(
-                f"• **{driver.metric}** — {driver.explanation}  \n"
-                f"  Current: `{driver.current_value}` · Benchmark: `{driver.benchmark}` · "
-                f"Impact: `{driver.impact}`"
+                f"• **{metric_label(driver.metric) if driver.category == 'METRIC' else (risk_code_label(driver.metric) if driver.category == 'RISK' else gate_label(driver.metric) if driver.category == 'GATE' else metric_label(driver.metric))}** — {localize_text(driver.explanation)}  \n"
+                f"  当前值：`{driver.current_value}` · 参考基准：`{driver.benchmark}` · "
+                f"影响：`{driver.impact}`"
             )
 
     with st.expander("管理层关注 · Management Attention", expanded=False):
-        st.write(insight.management_attention)
+        st.write(localize_text(insight.management_attention))
 
     with st.expander("建议下一步 · Recommended Next Step", expanded=False):
-        st.write(insight.recommended_next_step)
+        st.write(action_reason(insight.recommended_next_step))
 
     with st.expander("数据限制 · Data Limitations", expanded=False):
         for item in insight.data_limitations:
-            st.write(f"• {item}")
+            st.write(f"• {localize_text(item)}")
 
     # ── 6. Risk & Recommended Action ─────────────────────────────────────
     st.markdown("#### ⚠️ 风险与行动 · Risk & Action")
@@ -443,14 +479,14 @@ def render_partner_360(partners, evaluations, policies) -> None:
             _emojis = {"LOW": "✅", "MEDIUM": "⚠️", "HIGH": "🔶", "CRITICAL": "🚨"}
             for risk in result.risks:
                 st.warning(
-                    f"{_emojis.get(risk.severity.value, '')} **{risk.code}** "
-                    f"({risk.severity.value}): {risk.message}"
+                    f"{_emojis.get(risk.severity.value, '')} **{risk_code_label(risk.code)}** "
+                    f"（{risk_label(risk.severity)}）：{risk_message(risk.message)}"
                 )
         else:
             st.success("✅ 当前数据未检测到 Policy Risk Signal。")
         if result.gate_codes:
             for gate in result.gate_codes:
-                st.error(f"🚧 已触发 Gate：{gate}")
+                st.error(f"🚧 已触发治理门槛：{gate_label(gate)}")
         st.caption("风险信号由 Policy Rule Engine 驱动，需要人工复核。")
 
     with col_action:
@@ -458,11 +494,11 @@ def render_partner_360(partners, evaluations, policies) -> None:
         if result.recommended_actions:
             for action in result.recommended_actions:
                 with st.container(border=True):
-                    st.markdown(f"**{action.action.value}** · {action.priority.value}")
-                    st.write(action.reason)
+                    st.markdown(f"**{action_label(action.action)}** · {priority_label(action.priority)}")
+                    st.write(action_reason(action.reason))
                     st.caption(
-                        f"证据 Evidence: {action.evidence} · "
-                        f"人工复核 Human Review: "
+                        f"证据：{format_evidence(action.evidence)} · "
+                        f"需要人工复核："
                         f"{'是 · Yes' if action.human_review_required else '否 · No'}"
                     )
         else:
@@ -487,6 +523,7 @@ def render_partner_360(partners, evaluations, policies) -> None:
         resource_label = target_columns[3].selectbox(
             "资源承诺 · Resource Commitment",
             ["Unknown", "Confirmed", "Not confirmed"],
+            format_func=lambda value: {"Unknown": "暂不确定", "Confirmed": "已确认", "Not confirmed": "未确认"}[value],
         )
         rationale = assess_target(
             TargetRationaleInput(
@@ -518,30 +555,30 @@ def render_partner_360(partners, evaluations, policies) -> None:
             f"{rationale.required_growth_pct:+.1f}%"
             if rationale.required_growth_pct is not None else "N/A",
         )
-        tm[2].metric("评估结论\nAssessment", rationale.assessment.value.replace("_", " ").title())
+        tm[2].metric("评估结论\nAssessment", target_assessment_label(rationale.assessment))
         tm[3].metric("目标置信度\nConfidence", f"{rationale.confidence:.0%}")
         tl, tr = st.columns(2)
         with tl:
             st.markdown("**支持因素 · Supporting Drivers**")
             for item in rationale.supporting_drivers:
-                st.write(f"• {item}")
+                st.write(f"• {localize_text(item)}")
             st.markdown("**制约因素 · Constraining Drivers**")
             for item in rationale.constraining_drivers:
-                st.write(f"• {item}")
+                st.write(f"• {localize_text(item)}")
         with tr:
             st.markdown("**必要假设 · Required Assumptions**")
             for item in (rationale.required_assumptions or []):
-                st.write(f"• {item}")
+                st.write(f"• {localize_text(item)}")
             if not rationale.required_assumptions:
                 st.caption("当前证据未产生额外假设。")
             st.markdown("**管理复核 · Management Review**")
-            st.write(rationale.management_review)
+            st.write(localize_text(rationale.management_review))
 
     # ── 8. Audit Trail ───────────────────────────────────────────────────
     with st.expander("📐 指标级审计轨迹 · Metric-level Audit Trail"):
         metric_rows = [
-            {"metric": metric, "observed_value": getattr(partner, metric, None),
-             "normalized_score": score}
+            {"指标": metric_label(metric), "观测值": getattr(partner, metric, None),
+             "标准化得分": score}
             for metric, score in result.metric_scores.items()
         ]
         if metric_rows:
@@ -603,11 +640,11 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
         country_codes = sorted({policy.match.get("country_code") for policy in manager.policies if policy.match.get("country_code")}) or ["PL"]
 
     selectors = st.columns(5)
-    business_line = selectors[0].selectbox("业务线 · Business Line", business_lines)
-    lifecycle_stage = selectors[1].selectbox("生命周期阶段 · Lifecycle Stage", lifecycle_stages)
-    market_tier = selectors[2].selectbox("市场等级 · Market Tier", market_tiers)
-    partner_type = selectors[3].selectbox("合作伙伴类型 · Partner Type", partner_types)
-    country_override = selectors[4].selectbox("国家覆盖 · Country Override", ["None", *country_codes])
+    business_line = selectors[0].selectbox("业务线 · Business Line", business_lines, format_func=business_line_label)
+    lifecycle_stage = selectors[1].selectbox("生命周期阶段 · Lifecycle Stage", lifecycle_stages, format_func=lifecycle_label)
+    market_tier = selectors[2].selectbox("市场等级 · Market Tier", market_tiers, format_func=market_tier_label)
+    partner_type = selectors[3].selectbox("合作伙伴类型 · Partner Type", partner_types, format_func=partner_type_label)
+    country_override = selectors[4].selectbox("国家覆盖 · Country Override", ["None", *country_codes], format_func=lambda value: "无国家覆盖 · None" if value == "None" else value)
 
     context = {
         "business_line": business_line,
@@ -631,7 +668,7 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
     for index, pillar in enumerate(Pillar):
         pillar_values[pillar] = (
             pillar_columns[index % 3].number_input(
-                pillar.value.replace("_", " ").title(),
+                pillar_label(pillar),
                 min_value=0.0,
                 max_value=100.0,
                 value=float(active.pillar_weights[pillar] * 100),
@@ -651,11 +688,11 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
     metric_totals: dict[Pillar, float] = {}
     for pillar in Pillar:
         rules = [(name, rule) for name, rule in active.metrics.items() if rule.pillar == pillar]
-        with st.expander(pillar.value.replace("_", " ").title(), expanded=False):
+        with st.expander(pillar_label(pillar), expanded=False):
             for name, rule in rules:
                 metric_values[name] = (
                     st.number_input(
-                        name.replace("_", " ").title(),
+                        metric_label(name),
                         min_value=0.0,
                         max_value=100.0,
                         value=float(rule.weight * 100),
@@ -666,10 +703,10 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
                 )
             metric_totals[pillar] = sum(metric_values[name] for name, _ in rules)
             if abs(metric_totals[pillar] - 1) < 1e-9:
-                st.success(f"{pillar.value.replace('_', ' ').title()} 指标合计 · Metric Total：100%")
+                st.success(f"{pillar_label(pillar)} 指标权重合计：100%")
             else:
                 st.error(
-                    f"{pillar.value.replace('_', ' ').title()} 指标合计 · Metric Total："
+                    f"{pillar_label(pillar)} 指标权重合计："
                     f"{metric_totals[pillar]:.0%} — 必须等于 100%"
                 )
 
@@ -764,7 +801,7 @@ def render_scenario_lab(
         st.radio(
             "模拟范围 · Scope",
             [item.value for item in ScenarioScope],
-            format_func=lambda value: value.replace("_", " ").title(),
+            format_func=scenario_scope_label,
             horizontal=True,
         )
     )
@@ -783,7 +820,9 @@ def render_scenario_lab(
             "lifecycle_stage": sorted({partner.lifecycle_stage.value for partner in partners}),
         }
         for column, (field, options) in zip(columns, filter_options.items()):
-            selected = column.selectbox(field.replace("_", " ").title(), ["All", *options])
+            label_map = {"country_code": "国家", "business_line": "业务线", "market_tier": "市场等级", "lifecycle_stage": "生命周期"}
+            value_formatters = {"business_line": business_line_label, "market_tier": market_tier_label, "lifecycle_stage": lifecycle_label}
+            selected = column.selectbox(label_map[field], ["All", *options], format_func=lambda value, field=field: "全部" if value == "All" else value_formatters.get(field, lambda x: x)(value))
             if selected != "All":
                 filters[field] = selected
 
@@ -826,29 +865,41 @@ def render_scenario_lab(
     )
 
     comparisons = pd.DataFrame([item.model_dump() for item in report.comparisons])
+    comparisons["baseline_tier"] = comparisons["baseline_tier"].map(tier_label)
+    comparisons["scenario_tier"] = comparisons["scenario_tier"].map(tier_label)
+    comparisons["baseline_risk"] = comparisons["baseline_risk"].map(risk_label)
+    comparisons["scenario_risk"] = comparisons["scenario_risk"].map(risk_label)
+    comparisons["baseline_governance_status"] = comparisons["baseline_governance_status"].map(governance_label)
+    comparisons["scenario_governance_status"] = comparisons["scenario_governance_status"].map(governance_label)
+    comparisons = comparisons.rename(columns={
+        "partner_id": "合作伙伴 ID", "partner_name": "合作伙伴", "baseline_score": "基准评分",
+        "scenario_score": "模拟评分", "score_change": "评分变化", "baseline_tier": "基准等级",
+        "scenario_tier": "模拟等级", "baseline_risk": "基准风险", "scenario_risk": "模拟风险",
+        "baseline_governance_status": "基准治理状态", "scenario_governance_status": "模拟治理状态",
+    })
     st.dataframe(comparisons, use_container_width=True, hide_index=True)
     tier_mix = pd.DataFrame(
         [
             {
-                "tier": tier,
-                "Baseline": summary.tier_counts_before[tier],
-                "Scenario": summary.tier_counts_after[tier],
+                "等级": tier_label(tier),
+                "基准 · Baseline": summary.tier_counts_before[tier],
+                "模拟 · Scenario": summary.tier_counts_after[tier],
             }
             for tier in summary.tier_counts_before
         ]
-    ).melt(id_vars="tier", var_name="policy", value_name="partners")
+    ).melt(id_vars="等级", var_name="策略", value_name="合作伙伴数量")
     tier_chart = px.bar(
         tier_mix,
-        x="tier",
-        y="partners",
-        color="policy",
+        x="等级",
+        y="合作伙伴数量",
+        color="策略",
         barmode="group",
         title="等级变化前后对比 · Tier Count Before / After",
         text_auto=True,
     )
     st.plotly_chart(tier_chart, use_container_width=True)
     if summary.tier_migration:
-        st.write("等级迁移 · Tier Migration", summary.tier_migration)
+        st.write("等级迁移 · Tier Migration", {f"{tier_label(k.split('->')[0])} → {tier_label(k.split('->')[1])}" if "->" in k else k: v for k, v in summary.tier_migration.items()})
 
 
 def render_audit_log(manager: PolicyLifecycleManager) -> None:
@@ -879,7 +930,7 @@ def render_data_center(policy_repository) -> None:
     if demo_col.button("加载演示数据 · Load Demo Dataset", use_container_width=True):
         try:
             demo_frame = load_demo_portfolio_frame()
-            set_active_dataset(demo_frame, "Synthetic Demo Dataset")
+            set_active_dataset(demo_frame, "演示数据 · Synthetic Demo Dataset")
         except Exception as exc:
             st.error(f"演示数据加载失败 · Demo load failed: {exc}")
         else:
@@ -974,7 +1025,7 @@ def render_data_center(policy_repository) -> None:
                     st.dataframe(pd.DataFrame([{"Row": item.row, "Field": item.field, "Message": item.message} for item in norm_result.warnings[:50]]), hide_index=True, use_container_width=True)
                 if norm_result.success and norm_result.partner_records:
                     st.session_state[PENDING_DATASET_FRAME_KEY] = _frame_from_records(norm_result.partner_records)
-                    st.session_state[PENDING_DATASET_SOURCE_KEY] = "Uploaded Business Data"
+                    st.session_state[PENDING_DATASET_SOURCE_KEY] = "用户上传数据 · Uploaded Business Data"
                 else:
                     st.session_state.pop(PENDING_DATASET_FRAME_KEY, None)
                     st.session_state.pop(PENDING_DATASET_SOURCE_KEY, None)
@@ -991,7 +1042,7 @@ def render_data_center(policy_repository) -> None:
         metrics[2].metric("高/严重风险 · High/Critical", int(pending_results["risk_level"].isin(["HIGH", "CRITICAL"]).sum()))
         metrics[3].metric("平均置信度 · Avg Confidence", f"{pending_results['confidence'].mean():.0%}")
         if st.button("确认并设为当前数据集 · Confirm Active Dataset", type="primary"):
-            set_active_dataset(pending_frame, st.session_state.get(PENDING_DATASET_SOURCE_KEY, "Uploaded Business Data"))
+            set_active_dataset(pending_frame, st.session_state.get(PENDING_DATASET_SOURCE_KEY, "用户上传数据 · Uploaded Business Data"))
             st.session_state.pop(PENDING_DATASET_FRAME_KEY, None)
             st.session_state.pop(PENDING_DATASET_SOURCE_KEY, None)
             st.rerun()
