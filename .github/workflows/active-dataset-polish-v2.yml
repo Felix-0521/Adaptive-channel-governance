@@ -1,0 +1,77 @@
+name: Run active dataset patch
+
+on:
+  push:
+    branches:
+      - feature/xiaomi-inspired-ui
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feature/xiaomi-inspired-ui
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python tools/active_dataset_patch.py
+      - name: Add regression tests
+        shell: bash
+        run: |
+          cat > tests/test_active_dataset_ui.py <<'PY'
+          from pathlib import Path
+          from streamlit.testing.v1 import AppTest
+
+          ROOT = Path(__file__).parents[1]
+
+          def test_app_starts_without_automatic_partner_dataset() -> None:
+              app = AppTest.from_file(ROOT / "app.py").run(timeout=30)
+              assert not app.exception
+              info_values = [item.value for item in app.info]
+              assert any("No active dataset for Channel Overview" in value for value in info_values)
+              assert any("No active dataset for Partner 360" in value for value in info_values)
+              assert any("No active dataset for Scenario Lab" in value for value in info_values)
+              assert not any("合作伙伴总数" in metric.label for metric in app.metric)
+
+          def test_demo_dataset_requires_explicit_click_and_drives_dashboard() -> None:
+              app = AppTest.from_file(ROOT / "app.py").run(timeout=30)
+              button = next(item for item in app.button if "Load Demo Dataset" in item.label)
+              app = button.click().run(timeout=45)
+              assert not app.exception
+              totals = [m for m in app.metric if "合作伙伴总数" in m.label and "Total Partners" in m.label]
+              assert totals
+              assert totals[0].value == "50"
+          PY
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Test
+        run: python -m pytest
+      - name: Compile
+        run: python -m compileall -q app.py src
+      - name: Streamlit health
+        shell: bash
+        run: |
+          python -m streamlit run app.py --server.headless true --server.port 8501 > /tmp/streamlit.log 2>&1 &
+          pid=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8501/_stcore/health >/dev/null; then ok=1; break; fi
+            sleep 1
+          done
+          kill "$pid" || true
+          test "${ok:-0}" = 1 || { cat /tmp/streamlit.log; exit 1; }
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name 'Felix-0521'
+          git config user.email 'felixfan0521@outlook.com'
+          git add app.py src/channel_governance/ui_theme.py tests/test_active_dataset_ui.py
+          git diff --cached --check
+          git commit -m 'feat: make data center the active dataset gateway'
+          git push origin HEAD:feature/xiaomi-inspired-ui
