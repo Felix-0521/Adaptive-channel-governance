@@ -28,7 +28,7 @@ def apply_visual_theme() -> None:
           --mi-radius-md: 12px;
         }
 
-        html, body, [class*="st-"] {
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
           font-family: "MiSans", "Inter", "SF Pro Display", "Segoe UI",
             "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
         }

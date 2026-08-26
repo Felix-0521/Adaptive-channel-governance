@@ -1027,7 +1027,7 @@ def render_data_center(policy_repository) -> None:
                                 )
                                 # Top recommended action
                                 row["top_action"] = (
-                                    eval_res.recommended_actions[0].value
+                                    eval_res.recommended_actions[0].action.value
                                     if eval_res.recommended_actions else "NONE"
                                 )
                                 eval_results.append(row)
