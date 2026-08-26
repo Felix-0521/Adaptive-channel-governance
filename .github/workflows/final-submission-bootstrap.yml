@@ -90,7 +90,7 @@ jobs:
           cat > docs/FINAL_SUBMISSION_VERIFICATION.md <<'EOF'
           # Final Submission Verification
 
-          Date: 2026-08-26  
+          Date: 2026-08-26
           Scope: interview-submission hardening
 
           ## Verified
