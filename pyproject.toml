@@ -13,6 +13,7 @@ dependencies = [
   "plotly>=5.23,<7",
   "pydantic>=2.8,<3",
   "PyYAML>=6.0,<7",
+  "openpyxl>=3.1,<4",
 ]
 
 [project.optional-dependencies]

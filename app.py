@@ -927,7 +927,7 @@ def render_data_center(policy_repository) -> None:
                             if tid is None:
                                 st.warning(f"未识别的文件名 · Unrecognized filename: {fname}")
                                 continue
-                            raw_df = pd.read_excel(BytesIO(uploaded.read()), header=None) \
+                            raw_df = pd.read_excel(BytesIO(uploaded.read())) \
                                 if fname.endswith(".xlsx") \
                                 else pd.read_csv(BytesIO(uploaded.read()))
                             templates_by_id[tid] = raw_df

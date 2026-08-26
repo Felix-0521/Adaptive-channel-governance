@@ -3,8 +3,8 @@
 > 基于规则、数据与 AI 辅助诊断的全球渠道治理与经销商决策支持平台
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-73%20passing-2E7D32)](tests/)
-[![Fresh Clone](https://img.shields.io/badge/fresh--clone-passed-2E7D32)](docs/FINAL_BUILD_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-164%20passing-2E7D32)](tests/)
+[![Fresh Clone](https://img.shields.io/badge/fresh--clone-passed-2E7D32)](docs/FINAL_SUBMISSION_VERIFICATION.md)
 [![Data](https://img.shields.io/badge/data-synthetic%20only-555555)](data/sample_partners.csv)
 
 **Adaptive Channel Governance & Partner Scoring Platform 是一个可运行的 Sales Operations 决策支持系统原型，通过 Adaptive Policy、Partner Score、Risk、Gate、Scenario Simulation 与 Management Insight，帮助管理者对不同业务阶段和市场环境下的渠道伙伴进行差异化治理。**
@@ -316,14 +316,14 @@ tests/                         Pytest unit and integration tests
 | Python Product Code | ~2,700 LOC |
 | Total Python + Tests | ~3,600 LOC |
 | Python Files | 30+ |
-| Automated Tests | **163 passed** |
+| Automated Tests | **164 passed** |
 | Fresh-clone Validation | Passed |
 | Streamlit Startup Check | Passed |
 | Core AI API Requirement | None |
 
 测试覆盖 Adaptive Policy、两层权重、Country Override、Policy Lifecycle、SQLite restart persistence、Scenario isolation、Score、Confidence、Risk、Gate、Recommended Action、Management Insight、AI fallback/privacy、Target Rationale、Synthetic portfolio 与 Streamlit 执行。
 
-详细验证结果见 [FINAL_BUILD_REPORT.md](docs/FINAL_BUILD_REPORT.md)。
+详细验证结果见 [FINAL_BUILD_REPORT.md](docs/FINAL_SUBMISSION_VERIFICATION.md)。
 
 ## AI-assisted Development
 
