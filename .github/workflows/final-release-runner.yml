@@ -1,0 +1,52 @@
+name: Final release runner
+
+on:
+  push:
+    branches:
+      - feature/refined-enterprise-ui
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: "github.actor != 'github-actions[bot]'"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feature/refined-enterprise-ui
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/final_release_polish.py
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest
+      - run: python -m compileall -q app.py src
+      - name: Streamlit health
+        shell: bash
+        run: |
+          python -m streamlit run app.py --server.headless true --server.port 8501 > /tmp/streamlit.log 2>&1 &
+          pid=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8501/_stcore/health >/dev/null; then ok=1; break; fi
+            sleep 1
+          done
+          kill "$pid" || true
+          test "${ok:-0}" = 1 || { cat /tmp/streamlit.log; exit 1; }
+      - name: Final copy checks
+        shell: bash
+        run: |
+          ! grep -RniE 'Xiaomi|HyperOS|MiSans|xiaomi-inspired' README.md AI_USAGE.md docs src app.py
+          ! grep -RniE '164 passed|tests-164%20passing' README.md docs
+          git diff --check
+      - name: Commit final candidate
+        shell: bash
+        run: |
+          git config user.name 'Felix-0521'
+          git config user.email 'felixfan0521@outlook.com'
+          git add README.md AI_USAGE.md docs/FINAL_DEMO_GUIDE.md docs/FINAL_RELEASE_REPORT.md docs/FINAL_SUBMISSION_VERIFICATION.md docs/UI_VISUAL_SYSTEM.md src/channel_governance/ui_theme.py
+          git diff --cached --check
+          git commit -m 'release: finalize refined enterprise interview candidate'
+          git push origin HEAD:feature/refined-enterprise-ui
