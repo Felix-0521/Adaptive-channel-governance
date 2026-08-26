@@ -1,74 +1,116 @@
 # AI-Assisted Development Record
 
-This file documents actual AI assistance used during development. It is not a
-claim that AI independently designed, accepted, or verified the product.
+这个项目使用了 AI 辅助开发，但我希望把 AI 的角色说清楚：
 
-## Responsibility model
+**AI 是开发加速器，不是产品负责人，也不是业务决策者。**
 
-- Human-defined inputs: project direction, interview context, product SSOT,
-  HR assessment requirements, two-day scope, confidentiality boundary, and
-  final accountability for repository submission.
-- AI-assisted work: requirement decomposition, code drafting, test-case
-  generation, debugging, consistency review, and documentation drafting.
-- Verification: deterministic tests and local runtime checks are required
-  before AI-assisted output is accepted into the working tree.
-- Runtime boundary: the core application does not need an API key. Optional
-  AI-enhanced wording is user-selected, receives only a structured summary, and
-  always falls back to deterministic output.
+我负责确定项目要解决什么问题、哪些规则合理、哪些边界不能越，以及最终哪些内容可以进入仓库。AI 主要帮助我更快地拆需求、写初稿、补测试、找问题和整理文档。
 
-## Activity log
+## 我负责什么
 
-| Date | AI tool | Development task | AI contribution | Human review / modification | Verified result |
-|---|---|---|---|---|---|
-| 2026-08-24 | OpenAI Codex | Requirement decomposition | Converted the frozen product principles and HR brief into P0/P1 phases and a repository structure. | Candidate supplied the business context, selected the project, froze the SSOT, and required a two-day sprint. | Scope recorded in README and verification notes. |
-| 2026-08-24 | OpenAI Codex | Data contract and synthetic data | Drafted typed fields, constraints, row-level validation, and 12 fictional partner records. | Confidential-data guardrail retained; public company statistics were not encoded as program constants. | Contract, duplicate, unknown-column, null, and range tests pass. |
-| 2026-08-24 | OpenAI Codex | Policy and scoring engines | Drafted YAML policy inheritance, specificity resolution, normalization, pillar score, and confidence calculations. | Rules were kept deterministic and configurable; missing observations were excluded rather than converted to zero. | Policy and scoring boundary tests pass. |
-| 2026-08-24 | OpenAI Codex | Governance logic | Drafted independent risk signals, critical gates, tiering, status, and human-reviewed Recommended Actions. | Automatic price, margin, rebate, credit, freeze, termination, and legal conclusions were explicitly rejected. | A high-score/critical-gate regression test passes. |
-| 2026-08-24 | OpenAI Codex | Debugging and optimization | Detected and corrected lexicographic risk-severity ordering; added explicit ordinal ranking and a regression assertion. | Change accepted only after the portfolio test demonstrated `CRITICAL` correctly. | Full test suite passes. |
-| 2026-08-24 | OpenAI Codex | UI and documentation | Drafted Executive Overview, Partner 360, data-quality views, README, data contract, and verification record. | UI remains a presentation layer; product rules stay in independently tested modules. | Streamlit headless startup and Python compilation pass. |
-| 2026-08-25 | OpenAI Codex | Two-level policy configuration | Refactored configuration into canonical Pillar weights and independent Metric weights, with mathematical validation at both levels. | Candidate supplied the exact two-level product decision; automatic cross-level weight adjustment was rejected. | Weight-total and score-propagation tests pass. |
-| 2026-08-25 | OpenAI Codex | Policy inheritance and lifecycle | Implemented explicit Country Override resolution, Draft/Active/Archived states, scenario-tested marker, activation isolation, and audit records. | Silent fallback and direct overwrite of Active Policy were rejected. | Country, isolation, archive, and audit tests pass. |
-| 2026-08-25 | OpenAI Codex | Policy Studio and Scenario Lab | Built nested weight controls and three-scope baseline/draft comparison with tier migration and portfolio impact. | Scenario uses a temporary repository and cannot mutate Active Policy. | Streamlit HTTP smoke test and scenario safety tests pass. |
-| 2026-08-25 | OpenAI Codex | Recommended Action | Replaced unstructured recommendation strings with typed action, priority, reason, evidence, and human-review fields. | Total-score-to-action mapping was rejected; Gate/Risk precedence was retained. | New-business, mature-business, financial-risk, and gate tests pass. |
-| 2026-08-25 | OpenAI Codex | Management Insight design | Decomposed the explanation contract, drafted weighted driver ranking, deterministic narrative, severity order, and Partner 360 presentation. | Historical-change language was rejected because the current dataset has no time series; the engine states this limitation. | Gate, risk, confidence, driver, missing-evidence, and offline tests pass. |
-| 2026-08-25 | OpenAI Codex | Optional provider and prompt design | Drafted a provider protocol, whitelist context, Responses API adapter, structured narrative schema, guardrail prompt, and exception fallback. | Raw rows and domain result objects were kept outside the provider boundary; AI can edit prose but not deterministic severity or ranked evidence. | Unavailable, timeout, immutability, and privacy tests pass without a live API call. |
-| 2026-08-25 | OpenAI Codex | Target Rationale | Drafted configurable sanity-check thresholds, lifecycle-sensitive assessment, evidence confidence, UI, and boundary tests. | Automatic target setting and approval were rejected; low historical base is not treated as a negative for new business. | Four assessments, lifecycle, governance, and missing-data tests pass. |
-| 2026-08-25 | OpenAI Codex | Tests, debugging, and code review | Ran focused and full regression tests; tightened the AI schema so only narrative fields are provider-editable. | Changes were accepted in focused commits only after regression checks. | 64 tests pass before fresh-clone verification. |
-| 2026-08-25 | OpenAI Codex | SQLite persistence | Extended the existing schema boundary into transactional Policy snapshots and lifecycle Audit History, including restart tests. | YAML was retained as the first-run seed; authentication and multi-user workflow remained out of scope. | Policy status, Country Override, weights, scenario state, activation, and audit events survive restart. |
-| 2026-08-25 | OpenAI Codex | UI and Chinese README finalization | Reordered Partner 360 for management review, added portfolio distributions, and rewrote README for HR, Sales Operations, and technical reviewers. | Product claims, Synthetic Data disclosure, actual LOC, and project limitations were checked against the repository. | Full regression and final Fresh-clone checks required before acceptance. |
-| 2026-08-25 | OpenAI Codex | Partner Management and bilingual UI | Decomposed create/import requirements, drafted SQLite Partner persistence, CSV validation/preview, tests, and Chinese-first Streamlit labels. | Existing scoring engines were reused; Excel dependency expansion and invented metrics for newly created Partners were rejected. | Create, invalid input, duplicate, Data Quality, persistence, engine integration, and bilingual navigation tests pass. |
+这个项目里，以下内容由我确定并负责最终判断：
 
-| 2026-08-26 | OpenAI Codex | Active Dataset and final UI productization | Identified startup demo-data leakage, inconsistent dataset sources, a RecommendedAction rendering bug, and Streamlit icon-font collision; drafted a single Active Dataset gateway, explicit demo loading, empty states, refined enterprise visual rules, regression tests, and release documentation. | Candidate discovered the issues through hands-on browser testing, approved the final business flow and presentation, and required brand-neutral naming. Core scoring/governance/policy/evaluation modules were intentionally left unchanged. | 166 tests pass; Python compile and Streamlit health checks pass; explicit-demo and empty-state regressions pass. |
+- 项目方向和业务问题；
+- 产品范围和优先级；
+- Channel Governance 的核心逻辑；
+- `Risk ≠ Score`、`Gate > Score`、`NULL ≠ 0` 等设计原则；
+- 哪些判断必须保留 Human Review；
+- Synthetic Data 和保密边界；
+- UI 和数据流程是否符合真实使用习惯；
+- 是否接受 AI 生成的代码或方案；
+- 最终提交版本。
 
-## AI suggestions or tempting shortcuts rejected
+我不会因为 AI “能写出来”就直接接受。项目里多次出现过 AI 初稿在技术上可运行、但业务表达或产品逻辑不够合理的情况，最后都通过实际运行、测试和人工判断继续修改。
 
-The following approaches were deliberately not used:
+## AI 主要帮助了什么
 
-1. **Score → exact margin/rebate/credit.** This would turn decision support into
-   an unjustified automatic commercial decision.
-2. **AI-generated partner scores.** Scores must be deterministic, explainable,
-   configurable, and auditable.
-3. **Missing value → zero.** Unknown information must reduce confidence rather
-   than create a false negative observation.
-4. **Compliance risk hidden inside score.** A high-quality partner can still
-   have a critical current risk and trigger a governance hold.
-5. **Inventory “lower is better.”** Distributor stock supports local supply;
-   the synthetic policy therefore uses an optimal band.
-6. **Hard-coded public company scale figures.** Public figures provide context,
-   not internal operating constants.
-7. **Artificial line-count inflation.** The repository favors cohesive modules,
-   test coverage, and explainability over reaching a number with dead code.
-8. **Mandatory AI API integration.** The optional adapter is isolated; fresh
-   clones and the full core product run without the dependency or a key.
+AI 参与的工作主要包括：
 
-## How generated work was checked
+- 把业务想法拆成可开发的模块和任务；
+- 讨论数据结构和软件架构；
+- 草拟 Python / Streamlit 代码；
+- 设计自动化测试；
+- Debugging 和代码一致性检查；
+- 帮助整理 README、Demo Guide 和技术说明；
+- 对 UI、数据流和边界条件提出改进建议。
 
-- Pydantic enforces the input contract.
-- Pytest covers business invariants and end-to-end portfolio evaluation.
-- Python compilation catches syntax/import issues.
-- Streamlit is started headlessly as a runtime smoke test.
-- Synthetic data and policy files are reviewed for confidentiality boundaries.
-- The README is maintained against the actual repository structure and commands.
+AI 没有负责最终商业判断，也没有权限自动决定价格、返点、授信、终止合作、销售目标或合规结论。
 
-AI assistance accelerates implementation; it does not replace the candidate's
-responsibility to understand, explain, test, and defend every submitted design.
+## 开发过程中的几个实际例子
+
+| 阶段 | AI 的帮助 | 我的判断 / 修改 | 最终结果 |
+|---|---|---|---|
+| Requirement & Architecture | 把渠道治理需求拆成 Policy、Score、Risk、Gate、Action 等模块 | 确认项目不是 CRM，也不是自动商业决策系统 | 形成清晰的软件边界和模块结构 |
+| Scoring Engine | 草拟可配置权重、评分和 Confidence 逻辑 | 明确缺失值不能当 0，评分必须 deterministic | Score 和 Confidence 可解释、可测试 |
+| Governance Logic | 草拟 Risk、Gate、Tier 和 Recommended Action | 明确 Risk 必须独立于 Score，Gate 优先级更高 | 高分 + 高风险 + HOLD 可以同时存在 |
+| Policy Studio | 草拟两层权重和 Policy Lifecycle | 要求 Draft 不能直接影响正式评价，必须先 Scenario Test | Draft → Test → Activate 的完整流程 |
+| AI Insight | 草拟可选 AI Provider 和 Prompt | 限制 AI 只能解释结构化结果，不能修改核心判断 | AI 不可用时自动 fallback 到规则输出 |
+| Data Center | 帮助设计 Excel 模板识别、Validation 和 Normalization | 实际测试后发现 Demo 数据和上传数据混用风险，要求重做数据主链路 | 一个明确的 Active Dataset 统一驱动全系统 |
+| UI Productization | 草拟样式和布局规则 | 通过真实浏览器测试不断调整字号、间距、按钮和空状态 | 形成 Refined Enterprise UI |
+| Debugging | 帮助定位 RecommendedAction 属性错误、图标字体冲突等问题 | 逐项复现并验证修复 | 页面稳定运行，回归测试覆盖问题 |
+
+## 我刻意没有采用的做法
+
+有些方案实现起来很容易，但不适合这个项目，所以明确没有采用：
+
+1. **用 AI 直接生成 Partner Score**  
+   评分必须能解释、能复算、能审计，所以核心评分由规则完成。
+
+2. **把缺失值自动当成 0**  
+   “不知道”不等于“表现差”。缺失信息降低 Confidence，而不是制造负面事实。
+
+3. **Score 直接对应返点、价格或授信**  
+   这些属于真实商业决策，不能由一个原型自动执行。
+
+4. **把 Compliance Risk 藏进总分里**  
+   高分 Partner 仍然可能有重大当前风险，所以 Risk 必须独立存在。
+
+5. **认为库存越低越好**  
+   渠道库存也承担本地供货功能，因此采用合理区间，而不是简单追求最低库存。
+
+6. **为了满足代码量而增加无意义代码**  
+   项目优先保证完整性、测试和可解释性，而不是人为堆行数。
+
+7. **让核心产品依赖 AI API**  
+   没有 API Key 时系统仍然可以完整运行。AI 是可选能力，不是运行前提。
+
+## 我怎么验证 AI 生成的内容
+
+我使用了几层验证，而不是只看代码“看起来对不对”：
+
+```text
+业务逻辑判断
+→ Pydantic 数据约束
+→ Pytest 自动化测试
+→ Python Compile
+→ Streamlit Headless Startup
+→ 浏览器实际操作
+→ 再调整产品逻辑和 UI
+```
+
+最终版本包含 **166 个自动化测试**，并通过 Python 编译、Streamlit 启动、Excel 浏览器式上传、Synthetic Demo Dataset、Empty State 和 Active Dataset 流程验证。
+
+## 运行时 AI 的边界
+
+应用本身不要求 AI API Key。
+
+默认的 Management Insight 使用 deterministic rules，可以离线运行。可选的 AI-enhanced Insight 只接收经过筛选的结构化摘要，用于解释和改写文字。
+
+AI 不会接管：
+
+- Partner Score；
+- Risk Severity；
+- Gate；
+- Tier；
+- Governance Status；
+- 最终销售目标；
+- 商业条款；
+- 法律或合规结论。
+
+如果 AI Provider 不可用，系统会自动回退到 Rules-based Insight。
+
+## 最后说明
+
+我使用 AI 的目的不是证明“AI 可以替我完成开发”，而是证明：
+
+**我能够把业务问题拆清楚，知道哪些事情适合让 AI 加速，哪些判断必须由人负责，并且能通过测试和实际运行把 AI 生成的内容变成一个自己理解、能够解释、也能够承担结果的软件项目。**
