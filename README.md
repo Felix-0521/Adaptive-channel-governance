@@ -1,241 +1,228 @@
 # Adaptive Channel Governance & Partner Scoring Platform
 
-> 基于规则、数据与 AI 辅助诊断的全球渠道治理与经销商决策支持平台
+> 一个把渠道管理规则、伙伴评价、风险判断和 AI 辅助解释串成完整流程的决策支持原型。
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-166%20passing-2E7D32)](tests/)
 [![Fresh Clone](https://img.shields.io/badge/fresh--clone-passed-2E7D32)](docs/FINAL_SUBMISSION_VERIFICATION.md)
 [![Data](https://img.shields.io/badge/data-synthetic%20only-555555)](data/sample_partners.csv)
 
-**Adaptive Channel Governance & Partner Scoring Platform 是一个可运行的 Sales Operations 决策支持系统原型，通过 Adaptive Policy、Partner Score、Risk、Gate、Scenario Simulation 与 Management Insight，帮助管理者对不同业务阶段和市场环境下的渠道伙伴进行差异化治理。**
+## 30 秒看懂这个项目
 
-> **Synthetic Data 声明：本仓库中的 Partner、Distributor、销售、库存、授信、评分参数和 Policy 数据均为 Synthetic Data，仅用于项目演示，不包含任何公司的真实商业数据。**
-> All datasets and commercial parameters in this repository are synthetic and created solely for demonstration purposes.
+我想解决的不是“做一个更复杂的渠道评分表”，而是一个更实际的问题：
 
-本项目是一个 independently designed software prototype，不是任何公司的 Official System、Production System、Internal Tool 或真实 Distributor Deployment。
+**当业务线、市场阶段和经销商情况都不一样时，Sales Platform 应该如何用一套可解释、可调整、可验证的规则去做渠道治理？**
 
-## 项目背景
-
-全球渠道管理面对的问题不只是“哪个 Distributor 销售额最高”。不同的 Business Line、Country、Market Tier、Lifecycle Stage 和 Partner Type，需要不同的治理重点。
-
-传统统一评分容易忽略：
-
-- 新业务与成熟业务的评价差异；
-- Sell-in、Sell-out 与 Inventory 健康度之间的关系；
-- Financial Risk、Technical Capability 与 Compliance；
-- 不同国家与市场的战略价值；
-- 高 Partner Score 与当前重大 Risk 可能同时存在。
-
-本项目把渠道管理经验转化为**可配置、可解释、可测试、可追溯**的系统规则，形成完整链路：
+这个原型把渠道管理拆成一条清晰的链路：
 
 ```text
-Data → Adaptive Policy → Partner Score → Risk / Gate
-     → Governance Status → Recommended Action
-     → Management Insight / Target Rationale
+业务数据
+→ 适用规则（Adaptive Policy）
+→ Partner Score + Confidence
+→ Risk + Gate
+→ Tier + Governance Status
+→ Recommended Action
+→ Management Insight / Target Rationale
 ```
 
-## 核心设计理念
+它的核心不是让 AI 替管理者做决定，而是把原本依赖经验的判断变成**有规则、有证据、能解释、能测试**的管理流程。
 
-- **Rule-driven, not AI-driven**：核心判断由透明规则完成，AI 不参与评分。
-- **Explainable, not black-box**：每个 Score、Risk、Gate 和 Action 都能追溯到输入与 Policy。
-- **Configurable, not hard-coded**：两层权重和目标判断阈值来自版本化配置。
-- **Decision support, not automatic decision making**：不自动决定价格、返点、授信、冻结、终止或销售目标。
-- **Human-in-the-loop**：所有 Recommended Action 与管理结论都要求人工复核。
+| 项目 | 说明 |
+|---|---|
+| 产品形态 | 可运行的 Streamlit Web App 原型 |
+| 主要用户 | Sales Platform / Sales Operations / Channel Management |
+| 数据入口 | Data Center，支持标准 Excel/CSV 模板 |
+| Demo 数据 | 50 个完全虚构的 Synthetic Partners |
+| 核心判断 | 规则驱动，不由 AI 打分 |
+| AI 的角色 | 可选的解释与总结层 |
+| 自动化测试 | 166 tests passed |
+| 数据安全 | 仓库不包含真实公司或客户业务数据 |
 
-## 核心产品能力
+## 为什么做这个项目
 
-### 0. Partner Management
+渠道管理里有一个很常见的矛盾：大家都希望“有统一标准”，但真正落到业务上，又不能用同一把尺子评价所有伙伴。
 
-系统支持通过表单创建 Partner，或按照 `Upload → Validation → Preview → Confirm Import` 流程导入 CSV。Partner ID 自动生成，数据保存到本地 SQLite；Missing Fields、Invalid Values、Duplicate Partner 与 Data Quality Warning 会在确认前展示。
+例如：
 
-新 Partner 直接进入现有 Adaptive Policy 与 Governance Engine，不创建第二套评分逻辑。仅录入管理 Context 而尚未补充经营指标时，系统会降低 Confidence 并显示 `UNRATED`，不会伪造 Partner Score。当前依赖基线支持 CSV；Excel 可先另存为 CSV。
+- 新业务收入暂时不高，不代表没有潜力；
+- 成熟业务销售额很高，但库存或应收风险可能已经需要治理；
+- 某些国家需要不同的渠道规则；
+- 数据缺失和表现差不是一回事；
+- 高分伙伴也可能同时存在严重风险。
 
-### 1. Adaptive Policy
+所以这个项目先判断 **Business Context**，再决定“应该用什么规则评价”，而不是先给所有 Partner 套同一套分数。
 
-系统不会让所有 Distributor 使用同一套评分标准。Policy Context 由以下维度组成：
+## 我最看重的 5 个设计原则
+
+1. **Rule-driven, not AI-driven**  
+   Score、Risk、Gate、Tier 都来自明确规则。AI 不参与评分。
+
+2. **Business context before evaluation**  
+   Business Line、Lifecycle Stage、Market Tier、Partner Type 和 Country Override 会影响适用 Policy。
+
+3. **Risk ≠ Score**  
+   一个销售表现很好的 Partner，也可能因为库存、财务或合规问题进入 REVIEW / HOLD。
+
+4. **NULL ≠ 0**  
+   缺数据代表“证据不足”，不会被系统直接当成“表现为零”。缺失数据会降低 Confidence。
+
+5. **Decision support, not automatic decision making**  
+   系统给出 Recommended Action 和分析依据，但不会自动决定价格、返点、授信、终止合作或最终销售目标。
+
+## 产品怎么用
+
+### 1. Data Center：先把数据边界说清楚
+
+应用首次启动时：
 
 ```text
-Business Line × Lifecycle Stage × Market Tier × Partner Type × Country Override
+Active Dataset = None
 ```
 
-规则解析顺序为：
+系统不会偷偷加载 Demo 数据。
+
+用户可以选择：
 
 ```text
-Country Override → Exact Context → Business + Lifecycle → Lifecycle → Global Default
+A. Load Demo Dataset
+   → 显式加载 50 个 Synthetic Partners
+
+B. Upload Business Data
+   → 下载标准模板
+   → 填写并上传
+   → Validation
+   → Preview
+   → Confirm Active Dataset
 ```
 
-Partner 360 和 Policy Studio 会显示最终采用的 Policy Source，避免静默继承。
+只有被确认的数据集，才会统一驱动 Channel Overview、Partner 360 和 Scenario Lab。
 
-### 2. Two-level Weight Configuration
+### 2. Channel Overview：先看整体渠道健康度
 
-这是项目最核心的差异化能力之一。
+Dashboard 用来回答几个管理层最关心的问题：
 
-Level 1 — **Pillar Weight**：
+- 现在有多少 Partner？
+- 哪些 Partner 是 Strategic？
+- 哪些存在 High / Critical Risk？
+- 哪些需要 Review？
+- Score、Tier、Risk、Governance Status 的整体分布是什么样？
+
+### 3. Partner 360：解释“为什么”
+
+选择一个 Partner 后，可以按固定顺序往下看：
 
 ```text
-Operational Health = 25%
-Financial Health   = 15%
+Partner Profile
+→ Applied Policy
+→ Score / Confidence / Tier / Risk / Governance Status
+→ Pillar Breakdown
+→ Management Insight
+→ Risk & Recommended Action
+→ Target Rationale
 ```
 
-Level 2 — **Metric Weight**：
+重点不是只告诉用户“这个 Partner 得了多少分”，而是让结果可以追溯到具体指标、权重和风险信号。
+
+### 4. Policy Studio：规则可以调整，但不能随便生效
+
+Policy Context：
 
 ```text
-Operational Health
-├── Inventory Health       40%
-├── Sell-out Performance   35%
-├── Forecast Accuracy      15%
-└── Reporting Quality      10%
+Business Line
+× Lifecycle Stage
+× Market Tier
+× Partner Type
+× optional Country Override
 ```
 
-管理者不仅可以调整六大评价维度，还可以继续深入调整维度内部指标，从而实现更加精细的 Channel Governance。Pillar Weight 与 Metric Weight 分别校验 100%，互不自动修改。
-
-### 3. Country Override 与 Policy Lifecycle
-
-市场默认继承上级 Policy；特定国家需要差异化时，可通过 Country Override 覆盖规则。
+系统支持两层权重：
 
 ```text
-Active Policy → Draft → Scenario Test → Activate → Previous Version Archived
+Level 1: Pillar Weight
+Level 2: Metric Weight
 ```
 
-修改权重不会立即影响正式评价结果。Draft 必须经过 Scenario Test 才能 Activate；Policy 版本、状态、权重、Scenario Tested 状态和 Audit Log 均保存到本地 SQLite。
-
-### 4. Partner Score 与 Confidence
+修改规则不会直接覆盖正式 Policy，而是经过：
 
 ```text
-Metric Score × Metric Weight → Pillar Score
-Pillar Score × Pillar Weight → Partner Score
+Active Policy
+→ Draft
+→ Scenario Test
+→ Activate
+→ Previous Version Archived
 ```
 
-Partner Score 是 deterministic / explainable calculation，不由 AI 生成。
+### 5. Scenario Lab：先模拟，再决定是否启用
+
+支持三种范围：
 
 ```text
-NULL ≠ 0
+Single Partner
+Selected Market
+Full Portfolio
 ```
 
-数据缺失会降低 Confidence，而不是被自动当作零分，因此系统能够区分“表现差”和“证据不足”。
+用户可以比较 Baseline vs Scenario，看 Score Change、Tier Migration 和 Portfolio Impact，而不影响当前 Active Policy。
 
-### 5. Risk、Gate 与 Governance Status
+### 6. Management Insight：AI 是解释层，不是裁判
+
+默认使用离线的 Rules-based Insight，不需要 API Key。
+
+可选 AI-enhanced Insight 只接收结构化摘要，用来：
+
+- 解释；
+- 总结；
+- 突出重点；
+- 比较结果。
+
+AI 不会修改 Score、Risk、Gate、Tier，也不会生成最终商业决策。AI 不可用时，系统自动回退到 deterministic output。
+
+## 一个简单例子
+
+假设某个 Partner：
 
 ```text
-Risk ≠ Score
-Gate > Score-based Recommendation
+Revenue: 很高
+Partner Score: 89
+Tier: STRATEGIC
+Inventory Days: 过高
+Risk: CRITICAL
 ```
 
-因此以下结果完全可能同时成立：
+系统可以同时给出：
 
 ```text
-Partner Score:      89
-Partner Tier:       STRATEGIC
-Risk:               CRITICAL
-Governance Status:  HOLD
+Tier: STRATEGIC
+Governance Status: HOLD
+Recommended Action: INVENTORY_OPTIMIZATION / REVIEW
 ```
 
-Risk 独立于 Partner Score；Critical Gate 会优先触发人工治理 Review，阻止系统仅凭高分给出增长建议。
+这正是项目希望表达的逻辑：**表现好，不等于当前没有风险。**
 
-### 6. Recommended Action
-
-Recommended Action 回答“评价完成后，管理层下一步应该重点关注什么？”输出包含 Priority、Reason、Evidence 与 Human Review Required。
+## 5 分钟面试演示路线
 
 ```text
-ENGINEER_SUPPORT       DEMO_SUPPORT
-NEW_PRODUCT_ENABLEMENT BRANDING_MDF
-CHANNEL_EXPANSION      INVENTORY_OPTIMIZATION
-CREDIT_REVIEW          COMPLIANCE_REVIEW
+1. Data Center
+   先展示 Active Dataset = None，说明系统不会混用 Demo 与上传数据
+
+2. Load Demo Dataset
+   手动加载 50 个 Synthetic Partners
+
+3. Channel Overview
+   看整体渠道健康度和风险分布
+
+4. Partner 360
+   选一个 Partner，解释 Score、Risk、Gate 和 Recommended Action
+
+5. Policy Studio + Scenario Lab
+   改一个权重 → 保存 Draft → 模拟影响 → 再决定是否 Activate
 ```
 
-Action 不是 Partner Score 的简单映射。Gate 与 High Risk 优先于增长支持。
+更完整的演示话术见 [FINAL_DEMO_GUIDE.md](docs/FINAL_DEMO_GUIDE.md)。
 
-### 7. Scenario Lab
+## 本地运行
 
-支持 `Single Partner`、`Selected Market` 和 `Full Portfolio` 三个 Scope。在不修改 Active Policy 的情况下比较 **Baseline vs Scenario**，输出 Score Change、Tier Migration、Portfolio Impact、Upgraded Partners 和 Downgraded Partners。
-
-### 8. Management Insight
-
-- **Rules-based / Deterministic Insight**：默认模式，完全离线，无需 API；
-- **AI-enhanced Insight**：可选，仅对结构化管理摘要进行解释和改写。
-
-AI 只允许 Explain、Summarize、Highlight、Compare；不参与 Score、Risk、Partner Tier、Gate 或最终商业决策。Raw Data、DataFrame 和 CSV 不会发送给 AI Provider，任何 AI 错误都会自动 fallback 到 Deterministic Insight。
-
-### 9. Target Rationale / Target Sanity Check
-
-系统不会自动制定或批准销售目标，而是回答：
-
-> Proposed Target 是否具有足够业务依据？
-
-```text
-SUPPORTED | STRETCH | REVIEW_REQUIRED | INSUFFICIENT_EVIDENCE
-```
-
-ENTRY/BUILD/EMERGING 更关注 Pipeline、First Customer、Market Capability 与 Coverage；MATURE/DECLINE 更关注 Historical Growth、Sell-out、Inventory 与 Financial Risk。
-
-## Synthetic Data 业务示例
-
-### Case A — Mature Agriculture Partner
-
-```text
-Business Line: AGRICULTURE
-Lifecycle Stage: MATURE
-Market Tier: HIGH_VALUE
-```
-
-假设该 Partner 的 Revenue、Inventory 与 Financial Health 稳健，但 New Product Penetration 偏低，系统可以在 CORE / STRATEGIC Tier 下给出：
-
-```text
-NEW_PRODUCT_ENABLEMENT — HIGH
-```
-
-### Case B — Emerging Surveying Partner
-
-该 Partner 当前 Revenue 不高，但 Technical Capability 强、Market Coverage 较低。系统不会简单因规模较小而判定失败，而可能给出：
-
-```text
-CHANNEL_EXPANSION — HIGH
-DEMO_SUPPORT      — HIGH
-```
-
-相同销售额在不同 Lifecycle Stage 中代表不同业务含义，这正是 Adaptive 的核心。
-
-## 产品界面
-
-**流程化 Tab 顺序（业务流程：数据输入 → 分析 → 决策 → 模拟 → 审计）：**
-
-1. **数据中心 · Data Center** — 唯一数据入口；下载模板、上传验证、显式加载 Demo、确认 Active Dataset
-2. **渠道总览 · Channel Overview** — 仅基于当前 Active Dataset 的 Executive Dashboard，回答“渠道健康状态如何？”
-3. **合作伙伴全景分析 · Partner 360** — 基于同一 Active Dataset 解释“为什么是这个结果、下一步做什么？”
-4. **策略配置中心 · Policy Studio** — Country Override、Two-level Weight、Draft → Activate
-5. **策略模拟实验室 · Scenario Lab** — 三个 Scope 的 Baseline vs Scenario 对比
-6. **审计日志 · Audit Log** — SQLite 持久化的 Policy 生命周期事件
-
-历史 Tab（可通过侧栏访问）：
-- **合作伙伴管理 · Partner Management** — 创建 Partner、CSV Validation/Preview/Import
-- **数据质量 · Data Quality** — 缺失字段如何影响 Confidence
-
-## 5 分钟演示流程
-
-快速体验完整渠道治理分析流程：
-
-**Minute 0–1 · Data Center / Empty State**
-应用首次启动时 `Active Dataset = None`。Channel Overview、Partner 360 与 Scenario Lab 不会自动展示任何 Partner 数据；Policy Studio 仍可独立配置治理规则。这个设计确保 Demo 数据和用户数据不会被混淆。
-
-**Minute 1–2 · Load Demo or Upload Business Data**
-在 **Data Center** 二选一：
-- 点击 **Load Demo Dataset**，显式加载 50 个 Synthetic Partners；或
-- 上传标准 Excel/CSV 模板，运行 Validation，检查 Blocking Error / Warning / Data Quality，并预览待确认数据。
-
-上传数据只有在点击 **Confirm Active Dataset** 后，才会成为全系统统一数据源。
-
-**Minute 2–3 · Channel Overview**
-进入 **Channel Overview**，查看当前 Active Dataset 的 Partner 总数、Strategic Partner、High/Critical Risk、Review Required、Active Governance 与 Recommended Action 等管理信号，并结合治理状态、Partner Score、Tier、Risk 与 Lifecycle 分布判断渠道健康度。
-
-**Minute 3–4 · Partner 360**
-选择一个 Partner，沿固定阅读路径查看：Partner Profile → Score / Confidence / Tier / Risk / Governance Status → Pillar Breakdown → Management Insight → Risk & Recommended Action → Target Rationale。所有核心评价均来自 deterministic rule engine，AI 仅作为可选解释层。
-
-**Minute 4–5 · Policy Studio + Scenario Lab**
-在 **Policy Studio** 调整 Pillar / Metric 权重并保存 Draft；进入 **Scenario Lab** 用 Single Partner、Selected Market 或 Full Portfolio 比较 Baseline vs Scenario。Draft 不会直接改写 Active Policy，必须经过 Scenario Test 与显式 Activate。
-
-> 推荐面试演示路径：**先展示 Empty State → Load Demo Dataset → Channel Overview → Partner 360 → Policy Studio / Scenario Lab**。这样最能体现系统的数据边界、治理逻辑和产品完整性。
-
-Python 3.12 是标准运行环境。
+标准环境：**Python 3.12**
 
 ```bash
 git clone https://github.com/Felix-0521/Adaptive-channel-governance.git
@@ -261,83 +248,93 @@ python -m pytest
 python -m streamlit run app.py
 ```
 
-打开 Streamlit 输出的本地网址即可。首次启动会自动创建 `data/app.db`，无需手工执行 SQL。
+Streamlit 启动后，打开终端里显示的本地网址即可。首次运行会自动创建本地 SQLite 文件 `data/app.db`。
 
-> **Core functionality does not require an AI API key.**
+> Core functionality does not require an AI API key.
 
-### Optional AI Configuration
+### 可选 AI 配置
 
-AI-enhanced Insight 默认关闭。需要体验时先执行：
+如需体验 AI-enhanced Insight：
 
 ```bash
 pip install -r requirements-ai.txt
 ```
 
-然后在本地环境变量中设置，禁止把真实 Key 提交到 Git：
+然后在本地环境变量中配置：
 
 ```text
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5-mini
 ```
 
-未配置 Key、依赖或网络时，应用会自动使用 Rules-based Insight。
+真实 API Key 不应提交到 Git。
 
-## 技术架构
+## 技术结构
 
 ```text
 app.py                         Streamlit presentation layer
 config/scoring_rules.yaml      Adaptive Policy configuration
-data/sample_partners.csv       Synthetic Data
-data/app.db                    Local SQLite runtime state（自动创建，不提交）
+data/synthetic/                7 Excel templates + synthetic portfolio
 src/channel_governance/
-  models.py                    Pydantic contracts
-  validation.py                Data validation boundary
-  policy.py                    Resolution, lifecycle, persistence hooks
-  scoring.py                   Metric/Pillar Score and Confidence
+  models.py                    Pydantic data contracts
+  validation.py                Data validation
+  policy.py                    Policy resolution and lifecycle
+  scoring.py                   Score and Confidence
   governance.py                Risk, Gate, Tier, Status, Action
-  evaluation.py                Application orchestration
-  partner_management.py        Partner create/import validation workflow
+  evaluation.py                Evaluation orchestration
+  data_normalizer.py           Business template normalization
   scenario.py                  Baseline vs Scenario
   insight.py                   Deterministic Management Insight
-  insight_providers.py         Optional AI provider and fallback
-  target_rationale.py          Target Sanity Check
-  storage.py                   SQLite Policy/Audit persistence
-tests/                         Pytest unit and integration tests
+  insight_providers.py         Optional AI provider + fallback
+  target_rationale.py          Target sanity check
+  storage.py                   SQLite persistence / audit
+tests/                         Unit + integration tests
 ```
 
-核心业务逻辑与 Streamlit UI 分离，可独立测试。SQLite 是本地运行状态，不包含真实商业数据。
+展示层使用 **Refined Enterprise UI**：统一字号、留白、按钮、卡片、Tab、表格和 Empty State，但不改变业务引擎的计算逻辑。
 
-展示层采用 **Refined Enterprise UI**：统一字号、边距、卡片、按钮、Tab、表格与空状态规范；视觉样式与业务引擎解耦，不影响 Score / Risk / Gate / Policy 计算。
+## 工程验证
 
-## 工程质量与验证
-
-| 指标 | 最终结果 |
+| 检查项 | 结果 |
 |---|---:|
-| Python Product Code | ~2,700 LOC |
-| Total Python + Tests | ~3,600 LOC |
-| Python Files | 30+ |
 | Automated Tests | **166 passed** |
-| Fresh-clone Validation | Passed |
-| Streamlit Startup Check | Passed |
+| Python Compile | Passed |
+| Streamlit Headless Startup | Passed |
+| Excel Browser-style Roundtrip | Passed |
+| Explicit Demo Dataset Test | Passed |
+| Empty State / No Auto-load Test | Passed |
 | Core AI API Requirement | None |
 
-测试覆盖 Adaptive Policy、两层权重、Country Override、Policy Lifecycle、SQLite restart persistence、Scenario isolation、Score、Confidence、Risk、Gate、Recommended Action、Management Insight、AI fallback/privacy、Target Rationale、Synthetic portfolio 与 Streamlit 执行。
+详细验证记录见 [FINAL_SUBMISSION_VERIFICATION.md](docs/FINAL_SUBMISSION_VERIFICATION.md)。
 
-详细验证结果见 [FINAL_BUILD_REPORT.md](docs/FINAL_SUBMISSION_VERIFICATION.md)。
+## AI 是怎么参与开发的
 
-## AI-assisted Development
+这个项目确实使用了 AI 辅助开发，但我把 AI 当成“加速器”，不是项目负责人。
 
-AI 在本项目中实际参与了 Requirement Decomposition、Architecture Discussion、Code Generation Assistance、Debugging、Test Case Design 与 Documentation Optimization。
+AI 主要参与：
 
-所有核心业务规则、产品边界与最终判断均由开发者确认，AI-generated code 经过自动化测试和人工验证后才进入项目。完整过程、保留的边界和拒绝的捷径见 [AI_USAGE.md](AI_USAGE.md)。
+- 需求拆解和架构讨论；
+- 代码草拟；
+- 测试用例设计；
+- Debugging；
+- 文档整理和一致性检查。
 
-## 产品边界与已知限制
+我负责确定业务问题、规则边界、产品取舍，并通过实际运行和自动化测试决定哪些 AI 输出可以进入最终版本。
 
-- 仅使用 Synthetic Data，不连接真实 CRM / ERP；
-- 无 Authentication、Role Permission、Email 或 Approval Workflow；
-- SQLite 适合本地原型，不代表生产级多用户数据库；
-- AI-enhanced Insight 是可选解释层，不是业务决策引擎；
-- Target Rationale 是 evidence sanity check，不是自动目标制定或审批；
-- 本项目不声称 production-ready enterprise deployment。
+详细记录见 [AI_USAGE.md](AI_USAGE.md)。
 
-项目的目标是展示：如何把复杂渠道治理问题转化为一个可运行、可解释、可测试、可审计并能在面试中清晰演示的软件原型。
+## 数据与项目边界
+
+- 仓库内的 Partner、销售、库存、授信、Policy 参数均为 Synthetic Data；
+- 不包含任何公司的真实客户数据、销售数据或内部系统数据；
+- 不连接真实 CRM / ERP；
+- 暂无用户登录、角色权限和正式审批流；
+- SQLite 用于本地原型，不代表生产级多用户数据库；
+- Target Rationale 是合理性检查，不是自动目标制定；
+- 这是一个可运行的软件原型，不声称已经是 production-ready enterprise system。
+
+## 最后一句话
+
+这个项目想展示的是：
+
+**如何把复杂的渠道管理经验，转化成一套可以被系统执行、被管理者理解、被数据验证、也能继续迭代的治理方法。**
