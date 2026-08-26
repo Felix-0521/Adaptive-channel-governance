@@ -322,7 +322,7 @@ def localize_text(text: str) -> str:
         return direct[text]
 
     match = re.fullmatch(
-        r"(.+?) is classified as ([A-Z_]+) with a score of ([^.]+)\. Governance status is ([A-Z_]+) under (.+)\.",
+        r"(.+?) is classified as ([A-Z_]+) with a score of (.+?)\. Governance status is ([A-Z_]+) under (.+)\.",
         text,
     )
     if match:
