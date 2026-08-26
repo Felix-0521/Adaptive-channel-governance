@@ -289,6 +289,18 @@ def apply_visual_theme() -> None:
           }
           [data-testid="stMetric"] { min-height: 96px; }
         }
+
+        /* Preserve Streamlit Material Symbol glyphs. */
+        [data-testid="stIconMaterial"],
+        [data-testid="stIconMaterial"] span,
+        .material-symbols-rounded,
+        .material-icons {
+          font-family: "Material Symbols Rounded", "Material Icons" !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+          letter-spacing: normal !important;
+          text-transform: none !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,

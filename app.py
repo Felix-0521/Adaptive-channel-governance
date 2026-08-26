@@ -43,6 +43,13 @@ POLICY_PATH = ROOT / "config" / "scoring_rules.yaml"
 DATA_PATH = ROOT / "data" / "sample_partners.csv"
 DATABASE_PATH = ROOT / "data" / "app.db"
 SYNTHETIC_DIR = ROOT / "data" / "synthetic"
+SUPPORTED_BUSINESS_LINES = (
+    "AGRICULTURE", "GEOSPATIAL_SURVEYING", "LANDSCAPING", "CONSTRUCTION", "FACILITY",
+)
+ACTIVE_DATASET_FRAME_KEY = "active_dataset_frame"
+ACTIVE_DATASET_SOURCE_KEY = "active_dataset_source"
+PENDING_DATASET_FRAME_KEY = "pending_dataset_frame"
+PENDING_DATASET_SOURCE_KEY = "pending_dataset_source"
 
 
 @st.cache_data
@@ -61,6 +68,42 @@ def load_partner_data(store: SQLitePartnerStore) -> pd.DataFrame:
         [partner.model_dump(mode="json") for partner in managed]
     )
     return pd.concat([demo, managed_frame], ignore_index=True, sort=False)
+
+
+def _frame_from_records(records) -> pd.DataFrame:
+    return pd.DataFrame([record.model_dump(mode="json") for record in records])
+
+
+@st.cache_data
+def load_demo_portfolio_frame() -> pd.DataFrame:
+    templates_by_id = {}
+    for tid in TemplateId:
+        path = SYNTHETIC_DIR / f"{tid.value}.xlsx"
+        if path.exists():
+            templates_by_id[tid] = pd.read_excel(path)
+    result = normalize_excel_templates(templates_by_id)
+    if not result.success or not result.partner_records:
+        details = "; ".join(issue.message for issue in result.errors[:5])
+        raise ValueError(f"Demo dataset failed normalization: {details or 'no partner records'}")
+    return _frame_from_records(result.partner_records)
+
+
+def set_active_dataset(frame: pd.DataFrame, source: str) -> None:
+    require_valid_dataframe(frame)
+    st.session_state[ACTIVE_DATASET_FRAME_KEY] = frame.copy()
+    st.session_state[ACTIVE_DATASET_SOURCE_KEY] = source
+
+
+def clear_active_dataset() -> None:
+    for key in (ACTIVE_DATASET_FRAME_KEY, ACTIVE_DATASET_SOURCE_KEY, PENDING_DATASET_FRAME_KEY, PENDING_DATASET_SOURCE_KEY):
+        st.session_state.pop(key, None)
+
+
+def render_dataset_empty_state(feature_name: str) -> None:
+    st.info(
+        f"尚未加载业务数据 · No active dataset for {feature_name}. "
+        "请前往 Data Center 上传业务模板，或手动加载 Synthetic Demo Dataset。"
+    )
 
 
 def render_partner_management(
@@ -546,11 +589,18 @@ def render_policy_studio(manager: PolicyLifecycleManager, partners) -> None:
         "**Level 2 — Metric Weight**：调整每个 Pillar 内部指标的重要性。"
     )
 
-    business_lines = sorted({partner.business_line for partner in partners})
-    lifecycle_stages = sorted({partner.lifecycle_stage.value for partner in partners})
-    market_tiers = sorted({partner.market_tier.value for partner in partners})
-    partner_types = sorted({partner.partner_type.value for partner in partners})
-    country_codes = sorted({partner.country_code for partner in partners})
+    if partners:
+        business_lines = sorted({partner.business_line for partner in partners})
+        lifecycle_stages = sorted({partner.lifecycle_stage.value for partner in partners})
+        market_tiers = sorted({partner.market_tier.value for partner in partners})
+        partner_types = sorted({partner.partner_type.value for partner in partners})
+        country_codes = sorted({partner.country_code for partner in partners})
+    else:
+        business_lines = list(SUPPORTED_BUSINESS_LINES)
+        lifecycle_stages = [item.value for item in LifecycleStage]
+        market_tiers = [item.value for item in MarketTier]
+        partner_types = [item.value for item in PartnerType]
+        country_codes = sorted({policy.match.get("country_code") for policy in manager.policies if policy.match.get("country_code")}) or ["PL"]
 
     selectors = st.columns(5)
     business_line = selectors[0].selectbox("业务线 · Business Line", business_lines)
@@ -814,292 +864,137 @@ def render_audit_log(manager: PolicyLifecycleManager) -> None:
 
 
 def render_data_center(policy_repository) -> None:
-    """数据中心 · Business Data Center: template download, upload, validation, and evaluation."""
+    """Single gateway for templates, validation and the active analysis dataset."""
     st.subheader("数据中心 · Data Center")
-    st.caption(
-        "下载业务模板 → 填写数据 → 上传 Excel/CSV → 预览验证 → 确认导入 → 评估治理结果。"
-    )
+    st.caption("下载模板 → 填写 → 上传 → 验证 → 确认当前数据集 → 驱动所有治理分析。")
+
+    active_frame = st.session_state.get(ACTIVE_DATASET_FRAME_KEY)
+    active_source = st.session_state.get(ACTIVE_DATASET_SOURCE_KEY)
+    status_col, demo_col, clear_col = st.columns([3, 1, 1])
+    if isinstance(active_frame, pd.DataFrame) and not active_frame.empty:
+        status_col.success(f"当前数据集 · Active Dataset: {active_source or 'Business Data'} · {len(active_frame)} Partners")
+    else:
+        status_col.info("当前数据集 · Active Dataset: None")
+
+    if demo_col.button("加载演示数据 · Load Demo Dataset", use_container_width=True):
+        try:
+            demo_frame = load_demo_portfolio_frame()
+            set_active_dataset(demo_frame, "Synthetic Demo Dataset")
+        except Exception as exc:
+            st.error(f"演示数据加载失败 · Demo load failed: {exc}")
+        else:
+            st.session_state.pop(PENDING_DATASET_FRAME_KEY, None)
+            st.session_state.pop(PENDING_DATASET_SOURCE_KEY, None)
+            st.rerun()
+
+    if clear_col.button("清空当前数据 · Clear Dataset", disabled=not isinstance(active_frame, pd.DataFrame) or active_frame.empty, use_container_width=True):
+        clear_active_dataset()
+        st.rerun()
 
     mode = st.radio(
         "操作模式 · Operation Mode",
-        ["📥 模板下载 · Template Download", "⬆️ 数据上传与评估 · Upload & Evaluate"],
+        ["模板下载 · Template Download", "数据上传与评估 · Upload & Evaluate"],
         horizontal=True,
         index=0,
         label_visibility="collapsed",
     )
 
-    # ── TEMPLATE DOWNLOAD ────────────────────────────────────────────────────
-    if mode == "📥 模板下载 · Template Download":
+    if mode == "模板下载 · Template Download":
         st.markdown("#### 下载业务模板 · Download Business Templates")
-        st.info("点击以下链接下载标准 Excel 模板，填写后上传至本系统。")
-
+        st.info("下载标准 Excel 模板并填写。系统不会在后台自动加载 Demo 数据。")
         template_links = [
-            ("01_Partner_Master.xlsx",
-             "📋 合作伙伴主数据模板 · Partner Master Template"),
-            ("02_Commercial_Performance.xlsx",
-             "📊 商业绩效模板 · Commercial Performance Template"),
-            ("03_Operational_Health.xlsx",
-             "🏭 运营健康模板 · Operational Health Template"),
-            ("04_Financial_Health.xlsx",
-             "💰 财务健康模板 · Financial Health Template"),
-            ("05_Service_Capability.xlsx",
-             "🔧 服务能力模板 · Service Capability Template"),
-            ("06_Compliance_Governance.xlsx",
-             "⚖️ 合规治理模板 · Compliance Governance Template"),
-            ("07_Target_Rationale.xlsx",
-             "🎯 目标规划模板 · Target Rationale Template"),
+            ("01_Partner_Master.xlsx", "合作伙伴主数据 · Partner Master"),
+            ("02_Commercial_Performance.xlsx", "商业绩效 · Commercial Performance"),
+            ("03_Operational_Health.xlsx", "运营健康 · Operational Health"),
+            ("04_Financial_Health.xlsx", "财务健康 · Financial Health"),
+            ("05_Service_Capability.xlsx", "服务能力 · Service Capability"),
+            ("06_Compliance_Governance.xlsx", "合规治理 · Compliance Governance"),
+            ("07_Target_Rationale.xlsx", "目标规划 · Target Rationale"),
         ]
-
         cols = st.columns(2)
         for idx, (fname, label) in enumerate(template_links):
             src = SYNTHETIC_DIR / fname
-            if src.exists():
-                with cols[idx % 2]:
-                    with open(src, "rb") as f:
-                        data = f.read()
-                    st.download_button(
-                        label=label,
-                        data=data,
-                        file_name=fname,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key=f"dl_{fname}",
-                    )
-            else:
-                with cols[idx % 2]:
-                    st.warning(f"模板未找到 · Template not found: {fname}")
-
-        with st.expander("ℹ️ 模板填写说明 · Template Filling Guide"):
-            st.markdown("""
-            **必填字段（Required Fields）：**
-            - `Partner_ID` — 唯一标识符，与所有模板关联
-            - `Country` — 国家全名（Poland, Germany, France, Spain, Sweden, Netherlands, Italy）
-            - `Lifecycle_Stage` — ENTRY / BUILD / GROWTH / MATURE / DECLINE
-            - `Market_Tier` — HIGH_VALUE / GROWTH_VALUE / DEVELOPING
-            - `Annual_Revenue_USD` — 年度收入（整数，USD）
-            - `YoY_Growth_Percent` — 同比增长（格式："15%"）
-            - `Inventory_Days` — 库存天数（整数）
-            - `Payment_On_Time_Percent` — 准时付款率（格式："95%"）
-
-            **百分比字段格式：** 所有百分比字段使用 `"85%"` 格式（带引号），不要使用 0.85。
-            """)
-
-    # ── UPLOAD & EVALUATE ────────────────────────────────────────────────────
-    else:
-        st.markdown("#### 上传业务数据 · Upload Business Data")
-
-        # Step 1: File upload
-        st.markdown("**步骤 1：上传 Excel/CSV 文件 · Step 1: Upload Excel/CSV Files**")
-        uploaded_files = st.file_uploader(
-            "上传所有 7 个业务模板（可选） · Upload all 7 business templates (optional)",
-            type=["xlsx", "csv"],
-            accept_multiple_files=True,
-            help="支持 .xlsx 和 .csv。可不上传模板直接运行评估（使用 Synthetic Portfolio）。",
-        )
-
-        # Step 2: Normalization + Validation
-        st.markdown("**步骤 2：数据验证与预览 · Step 2: Validation & Preview**")
-        if st.button("🔍 运行数据验证 · Run Validation", type="primary"):
-            if not uploaded_files:
-                st.info("未上传文件，将使用 data/synthetic 目录中的完整 Portfolio 数据。")
-
-            with st.spinner("正在处理数据... · Processing data..."):
-                norm_result = None
-
-                if uploaded_files:
-                    try:
-                        import pandas as pd
-                        from io import BytesIO
-
-                        # Load uploaded files into a dict keyed by TemplateId
-                        templates_by_id = {}
-                        for uploaded in uploaded_files:
-                            fname = uploaded.name
-                            # Map filename → TemplateId
-                            fname_map = {
-                                "01_Partner_Master.xlsx": TemplateId.PARTNER_MASTER,
-                                "02_Commercial_Performance.xlsx": TemplateId.COMMERCIAL_PERFORMANCE,
-                                "03_Operational_Health.xlsx": TemplateId.OPERATIONAL_HEALTH,
-                                "04_Financial_Health.xlsx": TemplateId.FINANCIAL_HEALTH,
-                                "05_Service_Capability.xlsx": TemplateId.SERVICE_CAPABILITY,
-                                "06_Compliance_Governance.xlsx": TemplateId.COMPLIANCE_GOVERNANCE,
-                                "07_Target_Rationale.xlsx": TemplateId.TARGET_RATIONALE,
-                            }
-                            tid = fname_map.get(fname)
-                            if tid is None:
-                                st.warning(f"未识别的文件名 · Unrecognized filename: {fname}")
-                                continue
-                            raw_df = pd.read_excel(BytesIO(uploaded.read())) \
-                                if fname.endswith(".xlsx") \
-                                else pd.read_csv(BytesIO(uploaded.read()))
-                            templates_by_id[tid] = raw_df
-                    except Exception as exc:
-                        st.error(f"文件读取失败 · File read failed: {exc}")
-                        templates_by_id = {}
-
-                    if templates_by_id:
-                        norm_result = normalize_excel_templates(templates_by_id)
+            with cols[idx % 2]:
+                if src.exists():
+                    st.download_button(label=label, data=src.read_bytes(), file_name=fname, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"dl_{fname}", use_container_width=True)
                 else:
-                    # Use synthetic portfolio from disk
-                    try:
-                        templates_by_id = {}
-                        for tid in TemplateId:
-                            path = SYNTHETIC_DIR / f"{tid.value}.xlsx"
-                            if path.exists():
-                                templates_by_id[tid] = pd.read_excel(path)
-                        norm_result = normalize_excel_templates(templates_by_id)
-                    except Exception as exc:
-                        st.error(f"Synthetic Portfolio 加载失败: {exc}")
-                        norm_result = None
+                    st.warning(f"模板未找到 · Template not found: {fname}")
+        with st.expander("模板填写说明 · Template Filling Guide"):
+            st.markdown("""
+            **核心规则 · Core rules**
+            - `Partner_ID` 是七张模板的唯一关联键。
+            - 百分比字段可使用 `85%`；缺失值保持为空，不按 0 处理。
+            - 建议保留下载时的标准文件名，以便系统自动识别模板类型。
+            - Warning 不阻塞评估；Blocking Error 必须先修正。
+            """)
+        return
 
-                if norm_result:
-                    # Step 3: Validation Summary
-                    st.markdown("**步骤 3：导入摘要 · Step 3: Import Summary**")
-                    partners_detected = len(norm_result.partner_records)
-                    warnings_count = len(norm_result.warnings)
-                    errors_count = len(norm_result.errors)
-                    dq_score = norm_result.data_quality_score
+    st.markdown("#### 上传业务数据 · Upload Business Data")
+    uploaded_files = st.file_uploader(
+        "上传业务模板 · Upload business templates",
+        type=["xlsx", "csv"],
+        accept_multiple_files=True,
+        help="上传后先验证。只有点击 Confirm Active Dataset 后，其他分析页面才会切换到这批数据。",
+    )
 
-                    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-                    m_col1.metric("检测到合作伙伴 · Partners Detected", partners_detected)
-                    m_col2.metric("⚠ 警告 · Warnings", warnings_count)
-                    m_col3.metric("❌ 错误 · Errors", errors_count)
-                    m_col4.metric("数据质量 · Data Quality", f"{dq_score:.1%}")
+    if st.button("运行数据验证 · Run Validation", type="primary"):
+        if not uploaded_files:
+            st.warning("尚未上传文件。请先上传业务模板，或使用 Load Demo Dataset。")
+        else:
+            from io import BytesIO
+            template_map = {Path(tid.value).stem: tid for tid in TemplateId}
+            templates_by_id = {}
+            for uploaded in uploaded_files:
+                tid = template_map.get(Path(uploaded.name).stem)
+                if tid is None:
+                    st.warning(f"未识别模板文件 · Unrecognized template: {uploaded.name}")
+                    continue
+                payload = uploaded.getvalue()
+                try:
+                    frame = pd.read_excel(BytesIO(payload)) if uploaded.name.lower().endswith(".xlsx") else pd.read_csv(BytesIO(payload))
+                except Exception as exc:
+                    st.error(f"文件读取失败 · Failed to read {uploaded.name}: {exc}")
+                    continue
+                templates_by_id[tid] = frame
 
-                    if norm_result.errors:
-                        st.error(f"⚠ 发现 {errors_count} 个数据错误，请修正后重新上传。")
-                        error_df = pd.DataFrame([
-                            {"Row": e.row, "Field": e.field, "Message": e.message}
-                            for e in norm_result.errors
-                        ])
-                        st.dataframe(error_df, use_container_width=True, hide_index=True)
+            if not templates_by_id:
+                st.error("没有可识别的业务模板 · No recognized business templates were provided.")
+            else:
+                norm_result = normalize_excel_templates(templates_by_id)
+                summary = st.columns(4)
+                summary[0].metric("合作伙伴 · Partners", len(norm_result.partner_records))
+                summary[1].metric("警告 · Warnings", len(norm_result.warnings))
+                summary[2].metric("错误 · Errors", len(norm_result.errors))
+                summary[3].metric("数据质量 · Data Quality", f"{norm_result.data_quality_score:.0%}")
+                if norm_result.errors:
+                    st.error("存在 Blocking Error，当前数据不能设为 Active Dataset。")
+                    st.dataframe(pd.DataFrame([{"Row": item.row, "Field": item.field, "Message": item.message} for item in norm_result.errors]), hide_index=True, use_container_width=True)
+                if norm_result.warnings:
+                    st.warning("存在非阻塞 Warning；可以继续评估，但 Confidence 可能降低。")
+                    st.dataframe(pd.DataFrame([{"Row": item.row, "Field": item.field, "Message": item.message} for item in norm_result.warnings[:50]]), hide_index=True, use_container_width=True)
+                if norm_result.success and norm_result.partner_records:
+                    st.session_state[PENDING_DATASET_FRAME_KEY] = _frame_from_records(norm_result.partner_records)
+                    st.session_state[PENDING_DATASET_SOURCE_KEY] = "Uploaded Business Data"
+                else:
+                    st.session_state.pop(PENDING_DATASET_FRAME_KEY, None)
+                    st.session_state.pop(PENDING_DATASET_SOURCE_KEY, None)
 
-                    if norm_result.warnings:
-                        st.warning(f"⚠ 发现 {warnings_count} 个数据警告（非阻塞，可继续评估）。")
-                        warn_df = pd.DataFrame([
-                            {"Row": w.row, "Field": w.field, "Message": w.message}
-                            for w in norm_result.warnings[:50]
-                        ])
-                        st.dataframe(warn_df, use_container_width=True, hide_index=True)
-                        if len(norm_result.warnings) > 50:
-                            st.caption(f"…另有 {len(norm_result.warnings) - 50} 条警告未显示。")
-
-                    # Step 4: Preview normalized data
-                    if norm_result.partner_records:
-                        st.markdown("**步骤 4：规范化数据预览 · Step 4: Normalized Data Preview**")
-                        preview_rows = []
-                        for rec in norm_result.partner_records[:10]:
-                            d = rec.model_dump()
-                            preview_rows.append({
-                                "Partner_ID": d.get("partner_id"),
-                                "Name": d.get("partner_name"),
-                                "Country": d.get("country_code"),
-                                "BL": d.get("business_line"),
-                                "Lifecycle": d.get("lifecycle_stage"),
-                                "Tier": d.get("market_tier"),
-                                "Revenue": d.get("annual_revenue"),
-                                "Target_Ach%": d.get("target_achievement_pct"),
-                                "YoY%": d.get("yoy_growth_pct"),
-                                "Inv_Days": d.get("inventory_days"),
-                                "Payment%": d.get("payment_on_time_pct"),
-                                "Score": None,  # computed below
-                                "Confidence": None,
-                                "Risk": None,
-                                "Tier": None,
-                                "Action": None,
-                            })
-                        st.dataframe(preview_rows, use_container_width=True, hide_index=True)
-
-                        # Step 5: Run Evaluation
-                        st.markdown("**步骤 5：执行评估 · Step 5: Run Evaluation**")
-                        if norm_result.partner_records:
-                            eval_results = []
-                            severity_rank = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
-                            progress_bar = st.progress(0, text="评估中... · Evaluating...")
-                            for i, partner_record in enumerate(norm_result.partner_records):
-                                eval_res = evaluate_partner(partner_record, policy_repository)
-                                row = eval_res.model_dump()
-                                row["partner_name"] = partner_record.partner_name
-                                # Derive highest risk severity for display
-                                row["max_severity"] = max(
-                                    (r.severity.value for r in eval_res.risks),
-                                    default="LOW",
-                                    key=lambda v: severity_rank.get(v, -1)
-                                )
-                                # Top recommended action
-                                row["top_action"] = (
-                                    eval_res.recommended_actions[0].action.value
-                                    if eval_res.recommended_actions else "NONE"
-                                )
-                                eval_results.append(row)
-                                progress_bar.progress(
-                                    (i + 1) / len(norm_result.partner_records),
-                                    text=f"评估中 · Evaluating {i+1}/{len(norm_result.partner_records)}",
-                                )
-                            progress_bar.empty()
-
-                            eval_df = pd.DataFrame(eval_results)
-                            st.success(
-                                f"✓ 评估完成 · Evaluation complete: {len(eval_df)} 个合作伙伴 · partners"
-                            )
-
-                            # Results summary
-                            col1, col2, col3, col4 = st.columns(4)
-                            scored = eval_df["score"].dropna()
-                            severity_rank = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
-                            max_severity = eval_df["risks"].apply(
-                                lambda risks: max(
-                                    (r.severity.value for r in risks), default="LOW",
-                                    key=lambda v: severity_rank.get(v, -1)
-                                )
-                            )
-                            col1.metric("评估合作伙伴数 · Partners Evaluated", len(eval_df))
-                            col2.metric(
-                                "平均评分 · Average Score",
-                                f"{scored.mean():.1f}" if not scored.empty else "N/A"
-                            )
-                            col3.metric(
-                                "高风险数 · High Risk Count",
-                                int(max_severity.isin(["HIGH", "CRITICAL"]).sum())
-                            )
-                            col4.metric(
-                                "平均置信度 · Avg Confidence",
-                                f"{eval_df['confidence'].mean():.1%}"
-                                if "confidence" in eval_df and not eval_df["confidence"].isna().all()
-                                else "N/A"
-                            )
-
-                            # Pillar scores table
-                            st.markdown("##### 治理评估结果 · Governance Evaluation Results")
-                            eval_df["max_severity"] = max_severity
-                            eval_df["top_action"] = eval_df["recommended_actions"].apply(
-                                lambda actions: actions[0].value if actions else "NONE"
-                            )
-                            result_display = eval_df[[
-                                "partner_id", "partner_name", "score", "confidence",
-                                "max_severity", "tier", "top_action"
-                            ]].copy()
-                            result_display = result_display.sort_values("score", ascending=False)
-                            st.dataframe(result_display, use_container_width=True, hide_index=True)
-
-                            # Score distribution chart
-                            chart_tab1, chart_tab2 = st.tabs(
-                                ["评分分布 · Score Distribution", "风险分布 · Risk Distribution"]
-                            )
-                            with chart_tab1:
-                                fig = px.histogram(
-                                    eval_df, x="score", nbins=15,
-                                    title="合作伙伴评分分布 · Partner Score Distribution",
-                                    labels={"score": "评分 · Score", "count": "数量 · Count"},
-                                )
-                                st.plotly_chart(fig, use_container_width=True)
-                            with chart_tab2:
-                                risk_counts = max_severity.value_counts().reset_index()
-                                risk_counts.columns = ["Risk Level", "Count"]
-                                fig2 = px.pie(
-                                    risk_counts, names="Risk Level", values="Count",
-                                    title="风险等级分布 · Risk Level Distribution",
-                                )
-                                st.plotly_chart(fig2, use_container_width=True)
+    pending_frame = st.session_state.get(PENDING_DATASET_FRAME_KEY)
+    if isinstance(pending_frame, pd.DataFrame) and not pending_frame.empty:
+        st.markdown("#### 待确认数据集 · Validated Dataset Preview")
+        preview_columns = ["partner_id", "partner_name", "business_line", "country_code", "lifecycle_stage", "market_tier", "annual_revenue", "inventory_days"]
+        st.dataframe(pending_frame.head(10)[preview_columns], hide_index=True, use_container_width=True)
+        pending_results = evaluate_portfolio(pending_frame, policy_repository)
+        metrics = st.columns(4)
+        metrics[0].metric("待确认 Partners", len(pending_results))
+        metrics[1].metric("平均评分 · Avg Score", f"{pending_results['score'].dropna().mean():.1f}" if not pending_results['score'].dropna().empty else "N/A")
+        metrics[2].metric("高/严重风险 · High/Critical", int(pending_results["risk_level"].isin(["HIGH", "CRITICAL"]).sum()))
+        metrics[3].metric("平均置信度 · Avg Confidence", f"{pending_results['confidence'].mean():.0%}")
+        if st.button("确认并设为当前数据集 · Confirm Active Dataset", type="primary"):
+            set_active_dataset(pending_frame, st.session_state.get(PENDING_DATASET_SOURCE_KEY, "Uploaded Business Data"))
+            st.session_state.pop(PENDING_DATASET_FRAME_KEY, None)
+            st.session_state.pop(PENDING_DATASET_SOURCE_KEY, None)
+            st.rerun()
 
 
 st.set_page_config(page_title="Adaptive Channel Governance", page_icon="◈", layout="wide")
@@ -1114,12 +1009,17 @@ if "policy_manager" not in st.session_state:
 policy_manager: PolicyLifecycleManager = st.session_state["policy_manager"]
 partner_store = SQLitePartnerStore(DATABASE_PATH)
 policy_repository = policy_manager.active_repository()
-source_frame = load_partner_data(partner_store)
-partner_records = require_valid_dataframe(source_frame)
-portfolio_results = evaluate_portfolio(source_frame, policy_repository)
-evaluation_map = {
-    partner.partner_id: evaluate_partner(partner, policy_repository) for partner in partner_records
-}
+active_dataset = st.session_state.get(ACTIVE_DATASET_FRAME_KEY)
+if isinstance(active_dataset, pd.DataFrame) and not active_dataset.empty:
+    source_frame = active_dataset.copy()
+    partner_records = require_valid_dataframe(source_frame)
+    portfolio_results = evaluate_portfolio(source_frame, policy_repository)
+    evaluation_map = {partner.partner_id: evaluate_partner(partner, policy_repository) for partner in partner_records}
+else:
+    source_frame = pd.DataFrame()
+    partner_records = []
+    portfolio_results = pd.DataFrame()
+    evaluation_map = {}
 
 # B2: Final tab order — Data Center first (data input),
 # then analysis views, then policy/scenario, then audit.
@@ -1134,14 +1034,23 @@ data_center_tab, overview_tab, partner_tab, policy_tab, scenario_tab, audit_tab 
     ]
 )
 with overview_tab:
-    render_overview(portfolio_results)
+    if partner_records:
+        render_overview(portfolio_results)
+    else:
+        render_dataset_empty_state("Channel Overview")
 with partner_tab:
-    render_partner_360(partner_records, evaluation_map, policy_repository)
+    if partner_records:
+        render_partner_360(partner_records, evaluation_map, policy_repository)
+    else:
+        render_dataset_empty_state("Partner 360")
 with data_center_tab:
     render_data_center(policy_repository)
 with policy_tab:
     render_policy_studio(policy_manager, partner_records)
 with scenario_tab:
-    render_scenario_lab(policy_manager, source_frame, partner_records)
+    if partner_records:
+        render_scenario_lab(policy_manager, source_frame, partner_records)
+    else:
+        render_dataset_empty_state("Scenario Lab")
 with audit_tab:
     render_audit_log(policy_manager)
