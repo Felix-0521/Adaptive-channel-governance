@@ -1,9 +1,7 @@
 # 5-Minute Demo Guide
 
 > **Adaptive Channel Governance & Partner Scoring Platform**  
-> A walkthrough for interviewers, stakeholders, and reviewers.
-
----
+> Final interview walkthrough for a rule-driven, data-driven, AI-assisted channel governance prototype.
 
 ## Prerequisites
 
@@ -11,147 +9,72 @@
 git clone https://github.com/Felix-0521/Adaptive-channel-governance.git
 cd Adaptive-channel-governance
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1          # Windows
-# source .venv/bin/activate            # macOS/Linux
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Open the URL printed by Streamlit (usually `http://localhost:8501`).
+Open the Streamlit local URL. **No AI API key is required for core functionality.**
 
-> **No AI API key required.** The core application runs fully offline.
+## Minute 0–1 · Start with the Data Boundary
 
----
+Open **数据中心 · Data Center**. The application starts with `Active Dataset = None`.
 
-## Minute 0–1 · Business Problem
+Before data is loaded, Channel Overview, Partner 360 and Scenario Lab show explicit empty states. Policy Studio remains usable because governance rules exist before partner evaluation.
 
-**Tab: 数据中心 · Data Center**
+Key message: **the system never silently mixes demo data with uploaded business data.**
 
-The opening screen explains the core problem:
+## Minute 1–2 · Load Demo or Upload Business Data
 
-- Channel data is scattered across systems
-- Evaluation standards are inconsistent
-- Decisions rely on individual experience
+For a fast interview demo, click **加载演示数据 · Load Demo Dataset**. This explicitly loads the 50-partner synthetic portfolio and makes it the single Active Dataset.
 
-This platform transforms channel governance from an art into a **configurable, explainable, testable, and auditable** system.
+For the business workflow:
 
-Click **模板下载 · Download Templates** to see the 7 Excel templates:
-Partner Master, Commercial Performance, Operational Health, Financial Health,
-Service Capability, Compliance Governance, and Target Rationale.
+```text
+Download Templates → Fill Data → Upload → Validation → Preview → Confirm Active Dataset
+```
 
----
+Warnings are non-blocking and may lower confidence. Blocking errors must be corrected. Uploaded data does not affect analysis tabs until **Confirm Active Dataset** is clicked.
 
-## Minute 1–2 · Upload Partner Data
+## Minute 2–3 · Channel Overview
 
-**Tab: 数据中心 · Data Center**
+Use **渠道总览 · Channel Overview** to explain Partner count, Strategic Partners, High/Critical Risk, Review Required, Active Governance, Governance Status distribution, Partner Score, Tier, Risk and Lifecycle distributions.
 
-1. Click **数据上传与评估 · Upload & Evaluate**
-2. Click **运行数据验证 · Run Validation** (optionally upload your own Excel files — or skip to use the built-in Synthetic Portfolio of 50 partners)
-3. Review the **Import Summary**:
-   - Partners Detected
-   - Warnings (non-blocking — evaluation continues)
-   - Errors (blocking — must be corrected)
-   - Data Quality Score
+Key message: **Score, Risk and Governance Status are related but not interchangeable.**
 
-The system distinguishes **warnings from errors**. A warning means "data quality is reduced but we can still evaluate." An error means "this record cannot be evaluated."
+## Minute 3–4 · Partner 360
 
----
+Open **合作伙伴全景分析 · Partner 360** and follow the reading path:
 
-## Minute 2–3 · Partner Evaluation
+1. Partner Profile and applied Policy Source
+2. Partner Score / Confidence / Tier / Risk / Governance Status
+3. Six-pillar score breakdown
+4. Management Insight
+5. Risk signals and Recommended Actions
+6. Target Rationale
 
-**Tab: 数据中心 · Data Center**
+Key message: **NULL ≠ 0; missing evidence lowers confidence rather than fabricating a poor score.**
 
-Click **执行评估 · Run Evaluation**. The system evaluates all partners:
+## Minute 4–5 · Policy Studio and Scenario Lab
 
-- Metric Score × Metric Weight → Pillar Score
-- Pillar Score × Pillar Weight → Partner Score
-- Confidence (null ≠ 0: missing data lowers confidence, not score)
-- Risk Engine (independent from score)
-- Gate Engine (overrides score-based recommendations)
-- Tier Classification (UNRATED / DEVELOPMENT / CORE / STRATEGIC)
-- Governance Status (ACTIVE / MONITOR / REVIEW / HOLD)
-- Recommended Actions (prioritized, with human review flags)
+In **策略配置中心 · Policy Studio**, select the policy context, adjust Level 1 Pillar Weights or Level 2 Metric Weights, and save as Draft.
 
-After evaluation, view the **Score Distribution** histogram and **Risk Distribution** pie chart.
+In **策略模拟实验室 · Scenario Lab**, run Single Partner, Selected Market, or Full Portfolio scope and compare Baseline vs Scenario.
 
----
+Key message: **Draft policy changes are tested before activation; the live evaluation logic is never silently overwritten.**
 
-## Minute 3–4 · Partner 360 Deep Dive
+## Core Talking Points
 
-**Tab: 合作伙伴全景分析 · Partner 360**
-
-Select any partner. Follow the structured reading path:
-
-### 1. Partner Profile
-Who is this partner? Business line, country, lifecycle stage, market tier, and which policy is being applied.
-
-### 2. Score Overview
-Five headline numbers: Partner Score, Confidence, Tier, Risk Level, Governance Status.
-
-### 3. Pillar Breakdown
-A bar chart showing how the overall score is built from the six governance pillars:
-Operational Health, Financial Health, Market Capability, Service Capability, Compliance, and Growth Potential.
-
-### 4. Management Insight
-**Executive Summary**: why the partner received this score.
-**Key Drivers**: which specific metrics drove the score up or down, with benchmarks.
-**Recommended Next Step**: what the management team should focus on.
-
-### 5. Risk & Action
-Risk signals (with severity icons) and recommended actions (with evidence and human-review flags).
-
-### 6. Target Rationale
-Is the proposed sales target realistic? The system performs a sanity check based on historical growth, pipeline, lifecycle stage, and resource commitment.
-
----
-
-## Minute 4–5 · Policy Scenario & Management Insight
-
-**Tab: 策略配置中心 · Policy Studio**
-
-1. Select a policy context (e.g., AGRICULTURE · MATURE · HIGH_VALUE · DISTRIBUTOR · PL)
-2. Adjust **Level 1 Pillar Weights**: for example, increase Financial Health from 15% to 25%
-3. Save as **Draft**
-4. Note: Draft does not affect evaluation until activated
-
-**Tab: 策略模拟实验室 · Scenario Lab**
-
-1. Choose **Full Portfolio** scope
-2. Run the Scenario against the Draft
-3. Compare **Baseline vs Scenario**:
-   - Which partners' scores changed
-   - Which partners changed tier (upgraded / downgraded)
-   - Portfolio-level impact summary
-
-This demonstrates the core value: **"What if we cared more about financial health?"** — answered quantitatively, without touching the live policy.
-
----
-
-## Demo Scenarios for Interviewers
-
-### Scenario A — High Score, High Risk
-Show PT00006 (PT00006: High Revenue, 165 inventory days, REVIEW status, HIGH risk).
-The audience will ask: "Why is a high-revenue partner in REVIEW?"
-Answer: Risk is independent from score. Inventory risk triggers a governance review regardless of revenue.
-
-### Scenario B — Unrated Partner
-Show PT00024 (null revenue, null metrics, UNRATED, HOLD).
-The audience will ask: "Why does this partner have no score?"
-Answer: Missing data means unknown, never zero. The system correctly refuses to generate a score when data is insufficient.
-
-### Scenario C — Policy Impact
-Show the same partner's score under two different policy contexts (e.g., AGRICULTURE/MATURE vs. SURVEYING/ENTRY).
-Demonstrate that the platform applies different weights for different business realities.
-
----
-
-## Key Takeaways
-
-| Concept | Demonstration |
+| Principle | What the product demonstrates |
 |---|---|
-| Adaptive Policy | Different weights for different partner contexts |
-| Score ≠ Risk | High score + critical risk is possible and handled |
-| NULL ≠ 0 | Missing data ≠ bad performance |
-| Gate > Score | Compliance review blocks growth recommendations |
-| Explainable | Every score traces back to specific metrics and weights |
-| No AI required | Core functionality is fully deterministic |
+| Rule-driven, not AI-driven | Score, Risk, Gate and Tier are deterministic |
+| Business context before evaluation | Different lifecycle / market contexts can use different policies |
+| Risk ≠ Score | A high-score partner can still require REVIEW or HOLD |
+| Gate > Score | Critical governance signals override growth recommendations |
+| NULL ≠ 0 | Missing evidence lowers confidence |
+| One Active Dataset | Demo and uploaded data never coexist ambiguously |
+| Human-in-the-loop | Recommended Action remains decision support |
+| AI as explanation layer | Optional AI explains structured results but never sets commercial decisions |
+
+## Recommended Interview Story
+
+> “我不是在做一个更复杂的 Excel 评分表，而是在把渠道管理里的经验判断拆成 Context、Policy、Score、Risk、Gate 和 Action。数据先通过统一入口进入系统，规则先于评价，风险独立于分数，AI 只负责解释。这样 Sales Platform 才能真正做到可配置、可测试、可追溯，而不是替销售拍脑袋做决定。”

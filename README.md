@@ -3,7 +3,7 @@
 > 基于规则、数据与 AI 辅助诊断的全球渠道治理与经销商决策支持平台
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-164%20passing-2E7D32)](tests/)
+[![Tests](https://img.shields.io/badge/tests-166%20passing-2E7D32)](tests/)
 [![Fresh Clone](https://img.shields.io/badge/fresh--clone-passed-2E7D32)](docs/FINAL_SUBMISSION_VERIFICATION.md)
 [![Data](https://img.shields.io/badge/data-synthetic%20only-555555)](data/sample_partners.csv)
 
@@ -199,9 +199,9 @@ DEMO_SUPPORT      — HIGH
 
 **流程化 Tab 顺序（业务流程：数据输入 → 分析 → 决策 → 模拟 → 审计）：**
 
-1. **数据中心 · Data Center** — 下载模板、上传 Excel、数据校验、规范化、评估运行
-2. **渠道总览 · Channel Overview** — Executive Dashboard，6 KPI，回答"渠道健康状态如何？"
-3. **合作伙伴全景分析 · Partner 360** — 为什么这个 Partner 是这个结果？下一步应该做什么？
+1. **数据中心 · Data Center** — 唯一数据入口；下载模板、上传验证、显式加载 Demo、确认 Active Dataset
+2. **渠道总览 · Channel Overview** — 仅基于当前 Active Dataset 的 Executive Dashboard，回答“渠道健康状态如何？”
+3. **合作伙伴全景分析 · Partner 360** — 基于同一 Active Dataset 解释“为什么是这个结果、下一步做什么？”
 4. **策略配置中心 · Policy Studio** — Country Override、Two-level Weight、Draft → Activate
 5. **策略模拟实验室 · Scenario Lab** — 三个 Scope 的 Baseline vs Scenario 对比
 6. **审计日志 · Audit Log** — SQLite 持久化的 Policy 生命周期事件
@@ -214,28 +214,26 @@ DEMO_SUPPORT      — HIGH
 
 快速体验完整渠道治理分析流程：
 
-**Minute 0-1 · Business Problem**
-打开应用，直接进入 **Data Center**。页面说明：渠道管理面临数据分散、标准不一致、经验依赖等问题。本系统将渠道数据转化为可配置、可解释、可测试的治理决策。
+**Minute 0–1 · Data Center / Empty State**
+应用首次启动时 `Active Dataset = None`。Channel Overview、Partner 360 与 Scenario Lab 不会自动展示任何 Partner 数据；Policy Studio 仍可独立配置治理规则。这个设计确保 Demo 数据和用户数据不会被混淆。
 
-**Minute 1-2 · Upload Partner Data**
-点击 **模板下载** 下载 7 个 Excel 模板（或直接使用 Synthetic Portfolio）。点击 **数据上传与评估 → 运行数据验证**。系统展示 Import Summary：检测到合作伙伴数量、警告数（非阻塞）、错误数（阻塞）、数据质量分。
+**Minute 1–2 · Load Demo or Upload Business Data**
+在 **Data Center** 二选一：
+- 点击 **Load Demo Dataset**，显式加载 50 个 Synthetic Partners；或
+- 上传标准 Excel/CSV 模板，运行 Validation，检查 Blocking Error / Warning / Data Quality，并预览待确认数据。
 
-**Minute 2-3 · Partner Evaluation**
-点击 **执行评估**。系统对每个 Partner 调用评分引擎：Metric Score × Weight → Pillar Score → Partner Score。同时计算 Confidence、Risk Severity、Gate Signal、Tier、Governance Status、Recommended Action。评估完成后展示评分分布直方图与风险分布饼图。
+上传数据只有在点击 **Confirm Active Dataset** 后，才会成为全系统统一数据源。
 
-**Minute 3-4 · Partner 360 Deep Dive**
-进入 **Partner 360**。选择任意 Partner，按固定阅读路径查看：
-- 合作伙伴档案（谁）
-- 评分总览（得了几分）
-- 维度评分拆解（如何得出分数）
-- 管理洞察（为什么是这个结果）
-- 风险信号 + 管理建议（应该做什么）
-- 目标合理性分析（拟议目标是否合理）
+**Minute 2–3 · Channel Overview**
+进入 **Channel Overview**，查看当前 Active Dataset 的 Partner 总数、Strategic Partner、High/Critical Risk、Review Required、Active Governance 与 Recommended Action 等管理信号，并结合治理状态、Partner Score、Tier、Risk 与 Lifecycle 分布判断渠道健康度。
 
-**Minute 4-5 · Policy Scenario & Management Insight**
-进入 **Policy Studio** 修改权重（例：将 Financial Health 从 15% 调至 25%），保存为 Draft。进入 **Scenario Lab**，选择 Full Portfolio Scope，对比 Baseline vs Scenario。观察哪些 Partner 的 Tier 发生了变化，哪些 Partner 升级，哪些 Partner 降级。
+**Minute 3–4 · Partner 360**
+选择一个 Partner，沿固定阅读路径查看：Partner Profile → Score / Confidence / Tier / Risk / Governance Status → Pillar Breakdown → Management Insight → Risk & Recommended Action → Target Rationale。所有核心评价均来自 deterministic rule engine，AI 仅作为可选解释层。
 
+**Minute 4–5 · Policy Studio + Scenario Lab**
+在 **Policy Studio** 调整 Pillar / Metric 权重并保存 Draft；进入 **Scenario Lab** 用 Single Partner、Selected Market 或 Full Portfolio 比较 Baseline vs Scenario。Draft 不会直接改写 Active Policy，必须经过 Scenario Test 与显式 Activate。
 
+> 推荐面试演示路径：**先展示 Empty State → Load Demo Dataset → Channel Overview → Partner 360 → Policy Studio / Scenario Lab**。这样最能体现系统的数据边界、治理逻辑和产品完整性。
 
 Python 3.12 是标准运行环境。
 
@@ -309,6 +307,8 @@ tests/                         Pytest unit and integration tests
 
 核心业务逻辑与 Streamlit UI 分离，可独立测试。SQLite 是本地运行状态，不包含真实商业数据。
 
+展示层采用 **Refined Enterprise UI**：统一字号、边距、卡片、按钮、Tab、表格与空状态规范；视觉样式与业务引擎解耦，不影响 Score / Risk / Gate / Policy 计算。
+
 ## 工程质量与验证
 
 | 指标 | 最终结果 |
@@ -316,7 +316,7 @@ tests/                         Pytest unit and integration tests
 | Python Product Code | ~2,700 LOC |
 | Total Python + Tests | ~3,600 LOC |
 | Python Files | 30+ |
-| Automated Tests | **164 passed** |
+| Automated Tests | **166 passed** |
 | Fresh-clone Validation | Passed |
 | Streamlit Startup Check | Passed |
 | Core AI API Requirement | None |
