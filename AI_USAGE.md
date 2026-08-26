@@ -38,6 +38,8 @@ claim that AI independently designed, accepted, or verified the product.
 | 2026-08-25 | OpenAI Codex | UI and Chinese README finalization | Reordered Partner 360 for management review, added portfolio distributions, and rewrote README for HR, Sales Operations, and technical reviewers. | Product claims, Synthetic Data disclosure, actual LOC, and project limitations were checked against the repository. | Full regression and final Fresh-clone checks required before acceptance. |
 | 2026-08-25 | OpenAI Codex | Partner Management and bilingual UI | Decomposed create/import requirements, drafted SQLite Partner persistence, CSV validation/preview, tests, and Chinese-first Streamlit labels. | Existing scoring engines were reused; Excel dependency expansion and invented metrics for newly created Partners were rejected. | Create, invalid input, duplicate, Data Quality, persistence, engine integration, and bilingual navigation tests pass. |
 
+| 2026-08-26 | OpenAI Codex | Active Dataset and final UI productization | Identified startup demo-data leakage, inconsistent dataset sources, a RecommendedAction rendering bug, and Streamlit icon-font collision; drafted a single Active Dataset gateway, explicit demo loading, empty states, refined enterprise visual rules, regression tests, and release documentation. | Candidate discovered the issues through hands-on browser testing, approved the final business flow and presentation, and required brand-neutral naming. Core scoring/governance/policy/evaluation modules were intentionally left unchanged. | 166 tests pass; Python compile and Streamlit health checks pass; explicit-demo and empty-state regressions pass. |
+
 ## AI suggestions or tempting shortcuts rejected
 
 The following approaches were deliberately not used:
