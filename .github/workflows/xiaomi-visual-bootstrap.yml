@@ -24,326 +24,303 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Build Xiaomi-inspired visual system
+      - name: Build presentation-only visual system
         shell: bash
         run: |
           set -euo pipefail
           cat > src/channel_governance/ui_theme.py <<'PY'
           """Presentation-only visual system for the Streamlit prototype.
 
-          Inspired by Xiaomi / HyperOS principles: clear hierarchy, comfortable
-          spacing, restrained surfaces, and a small amount of orange accent.
-          This module does not change any governance or scoring behavior.
+          The theme translates Xiaomi / HyperOS-inspired principles such as
+          clear hierarchy, comfortable spacing, restrained surfaces and a small
+          orange accent into an enterprise dashboard. It changes presentation
+          only and never touches governance or scoring behavior.
           """
 
           import streamlit as st
 
 
           def apply_visual_theme() -> None:
-              """Apply the repository's presentation system through scoped CSS."""
+              """Apply typography, spacing, surfaces and component styling."""
               st.markdown(
                   """
                   <style>
                   :root {
-                      --mi-bg: #f7f7f7;
-                      --mi-surface: #ffffff;
-                      --mi-surface-soft: #f2f2f2;
-                      --mi-text: #191919;
-                      --mi-text-2: #5f5f5f;
-                      --mi-muted: #8a8a8a;
-                      --mi-line: #e8e8e8;
-                      --mi-accent: #ff6900;
-                      --mi-radius-xl: 20px;
-                      --mi-radius-lg: 16px;
-                      --mi-radius-md: 12px;
+                    --mi-bg: #f7f7f7;
+                    --mi-surface: #ffffff;
+                    --mi-soft: #f2f2f2;
+                    --mi-text: #191919;
+                    --mi-text-2: #5f5f5f;
+                    --mi-muted: #8a8a8a;
+                    --mi-line: #e8e8e8;
+                    --mi-accent: #ff6900;
+                    --mi-radius-xl: 20px;
+                    --mi-radius-lg: 16px;
+                    --mi-radius-md: 12px;
                   }
 
-                  html, body, [class*="st-"], [class*="css"] {
-                      font-family: "MiSans", "Inter", "SF Pro Display", "Segoe UI",
-                          "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+                  html, body, [class*="st-"] {
+                    font-family: "MiSans", "Inter", "SF Pro Display", "Segoe UI",
+                      "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
                   }
 
                   [data-testid="stAppViewContainer"] {
-                      background: var(--mi-bg);
-                      color: var(--mi-text);
+                    background: var(--mi-bg);
+                    color: var(--mi-text);
                   }
 
                   [data-testid="stHeader"] {
-                      background: rgba(247, 247, 247, 0.86);
-                      backdrop-filter: blur(18px);
-                      -webkit-backdrop-filter: blur(18px);
+                    background: rgba(247,247,247,.86);
+                    backdrop-filter: blur(18px);
+                    -webkit-backdrop-filter: blur(18px);
+                  }
+
+                  [data-testid="stSidebar"] {
+                    background: #f1f1f1;
+                    border-right: 1px solid var(--mi-line);
                   }
 
                   .block-container {
-                      max-width: 1480px;
-                      padding-top: 34px;
-                      padding-bottom: 64px;
-                      padding-left: clamp(20px, 3.2vw, 52px);
-                      padding-right: clamp(20px, 3.2vw, 52px);
+                    max-width: 1480px;
+                    padding-top: 34px;
+                    padding-bottom: 64px;
+                    padding-left: clamp(20px, 3.2vw, 52px);
+                    padding-right: clamp(20px, 3.2vw, 52px);
                   }
 
                   h1, h2, h3, h4, h5, h6 {
-                      color: var(--mi-text);
-                      letter-spacing: -0.02em;
+                    color: var(--mi-text);
+                    letter-spacing: -0.02em;
                   }
 
                   h1 {
-                      font-size: clamp(30px, 2.4vw, 38px) !important;
-                      line-height: 1.18 !important;
-                      font-weight: 650 !important;
-                      margin-bottom: 8px !important;
+                    font-size: clamp(31px, 2.5vw, 39px) !important;
+                    line-height: 1.16 !important;
+                    font-weight: 650 !important;
+                    letter-spacing: -0.035em !important;
+                    margin: 2px 0 8px 0 !important;
+                  }
+
+                  h1::before {
+                    content: "CHANNEL GOVERNANCE / DECISION SUPPORT";
+                    display: block;
+                    color: var(--mi-accent);
+                    font-size: 11px;
+                    line-height: 1.4;
+                    font-weight: 700;
+                    letter-spacing: .13em;
+                    margin-bottom: 10px;
                   }
 
                   h2 {
-                      font-size: 24px !important;
-                      line-height: 1.28 !important;
-                      font-weight: 620 !important;
-                      margin-top: 22px !important;
-                      margin-bottom: 12px !important;
+                    font-size: 24px !important;
+                    line-height: 1.28 !important;
+                    font-weight: 620 !important;
+                    margin-top: 24px !important;
+                    margin-bottom: 12px !important;
                   }
 
                   h3 {
-                      font-size: 18px !important;
-                      line-height: 1.4 !important;
-                      font-weight: 620 !important;
-                      margin-top: 18px !important;
-                      margin-bottom: 10px !important;
+                    font-size: 18px !important;
+                    line-height: 1.4 !important;
+                    font-weight: 620 !important;
+                    margin-top: 20px !important;
+                    margin-bottom: 10px !important;
                   }
 
                   h4, h5, h6 {
-                      font-size: 15px !important;
-                      line-height: 1.45 !important;
-                      font-weight: 620 !important;
+                    font-size: 15px !important;
+                    line-height: 1.45 !important;
+                    font-weight: 620 !important;
                   }
 
-                  p, li, label, .stMarkdown {
-                      font-size: 14px;
-                      line-height: 1.62;
+                  p, li, label {
+                    font-size: 14px;
+                    line-height: 1.62;
                   }
 
                   [data-testid="stCaptionContainer"],
                   [data-testid="stCaptionContainer"] p {
-                      color: var(--mi-muted) !important;
-                      font-size: 12.5px !important;
-                      line-height: 1.55 !important;
-                  }
-
-                  .mi-page-header {
-                      margin: 2px 0 26px 0;
-                      max-width: 980px;
-                  }
-
-                  .mi-page-eyebrow {
-                      color: var(--mi-accent);
-                      font-size: 11px;
-                      line-height: 1.4;
-                      font-weight: 700;
-                      letter-spacing: 0.13em;
-                      text-transform: uppercase;
-                      margin-bottom: 10px;
-                  }
-
-                  .mi-page-title {
-                      margin: 0;
-                      color: var(--mi-text);
-                      font-size: clamp(31px, 2.5vw, 39px);
-                      line-height: 1.16;
-                      font-weight: 650;
-                      letter-spacing: -0.035em;
-                  }
-
-                  .mi-page-subtitle {
-                      margin: 10px 0 0 0;
-                      color: var(--mi-text-2);
-                      font-size: 14px;
-                      line-height: 1.55;
-                      font-weight: 450;
+                    color: var(--mi-muted) !important;
+                    font-size: 12.5px !important;
+                    line-height: 1.55 !important;
+                    margin-bottom: 10px !important;
                   }
 
                   div[data-baseweb="tab-list"] {
-                      gap: 4px;
-                      background: var(--mi-surface);
-                      border: 1px solid var(--mi-line);
-                      border-radius: var(--mi-radius-lg);
-                      padding: 5px;
-                      margin-bottom: 18px;
-                      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+                    gap: 4px;
+                    background: var(--mi-surface);
+                    border: 1px solid var(--mi-line);
+                    border-radius: var(--mi-radius-lg);
+                    padding: 5px;
+                    margin-top: 18px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 1px 2px rgba(0,0,0,.02);
                   }
 
                   button[data-baseweb="tab"] {
-                      min-height: 42px;
-                      border-radius: 11px;
-                      padding: 0 15px;
-                      color: var(--mi-text-2);
-                      font-size: 13px;
-                      font-weight: 560;
-                      white-space: nowrap;
+                    min-height: 48px;
+                    border-radius: 11px;
+                    padding: 6px 15px;
+                    color: var(--mi-text-2);
+                    font-size: 12.5px;
+                    font-weight: 560;
+                  }
+
+                  button[data-baseweb="tab"] p {
+                    white-space: pre-line !important;
+                    line-height: 1.24 !important;
+                    text-align: left;
                   }
 
                   button[data-baseweb="tab"][aria-selected="true"] {
-                      background: var(--mi-surface-soft);
-                      color: var(--mi-text);
-                      font-weight: 650;
+                    background: var(--mi-soft);
+                    color: var(--mi-text);
+                    font-weight: 650;
                   }
 
                   button[data-baseweb="tab"][aria-selected="true"] p {
-                      color: var(--mi-text) !important;
+                    color: var(--mi-text) !important;
                   }
 
                   [data-testid="stMetric"] {
-                      background: var(--mi-surface);
-                      border: 1px solid var(--mi-line);
-                      border-radius: var(--mi-radius-lg);
-                      padding: 17px 18px 16px 18px;
-                      min-height: 104px;
-                      box-shadow: 0 1px 2px rgba(0,0,0,0.018);
+                    background: var(--mi-surface);
+                    border: 1px solid var(--mi-line);
+                    border-radius: var(--mi-radius-lg);
+                    padding: 17px 18px 16px;
+                    min-height: 104px;
+                    box-shadow: 0 1px 2px rgba(0,0,0,.018);
                   }
 
                   [data-testid="stMetricLabel"],
                   [data-testid="stMetricLabel"] p {
-                      color: var(--mi-muted) !important;
-                      font-size: 12.5px !important;
-                      line-height: 1.4 !important;
-                      font-weight: 520 !important;
+                    color: var(--mi-muted) !important;
+                    font-size: 12.5px !important;
+                    line-height: 1.4 !important;
+                    font-weight: 520 !important;
                   }
 
                   [data-testid="stMetricValue"],
                   [data-testid="stMetricValue"] div {
-                      color: var(--mi-text) !important;
-                      font-size: 27px !important;
-                      line-height: 1.25 !important;
-                      font-weight: 650 !important;
-                      letter-spacing: -0.025em !important;
+                    color: var(--mi-text) !important;
+                    font-size: 27px !important;
+                    line-height: 1.25 !important;
+                    font-weight: 650 !important;
+                    letter-spacing: -0.025em !important;
                   }
 
                   .stButton > button,
                   .stDownloadButton > button,
                   button[data-testid^="stBaseButton"] {
-                      min-height: 42px;
-                      border-radius: 999px !important;
-                      padding: 0 20px !important;
-                      border: 1px solid #dddddd;
-                      background: var(--mi-surface);
-                      color: var(--mi-text);
-                      font-size: 13px;
-                      font-weight: 620;
-                      box-shadow: none;
-                      transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+                    min-height: 42px;
+                    border-radius: 999px !important;
+                    padding: 0 20px !important;
+                    border: 1px solid #dddddd;
+                    background: var(--mi-surface);
+                    color: var(--mi-text);
+                    font-size: 13px;
+                    font-weight: 620;
+                    box-shadow: none;
+                    transition: border-color 120ms ease, background 120ms ease;
                   }
 
                   .stButton > button:hover,
                   .stDownloadButton > button:hover,
                   button[data-testid^="stBaseButton"]:hover {
-                      border-color: #c8c8c8;
-                      background: #fafafa;
+                    border-color: #c8c8c8;
+                    background: #fafafa;
                   }
 
                   button[data-testid="stBaseButton-primary"],
                   .stButton > button[kind="primary"] {
-                      background: var(--mi-text) !important;
-                      color: #ffffff !important;
-                      border-color: var(--mi-text) !important;
+                    background: var(--mi-text) !important;
+                    color: #ffffff !important;
+                    border-color: var(--mi-text) !important;
                   }
 
                   button[data-testid="stBaseButton-primary"]:hover,
                   .stButton > button[kind="primary"]:hover {
-                      background: #303030 !important;
-                      border-color: #303030 !important;
+                    background: #303030 !important;
+                    border-color: #303030 !important;
                   }
 
                   [data-baseweb="input"] > div,
                   [data-baseweb="select"] > div,
                   [data-baseweb="textarea"] > div {
-                      min-height: 44px;
-                      border-radius: var(--mi-radius-md) !important;
-                      border-color: var(--mi-line) !important;
-                      background: var(--mi-surface) !important;
-                      box-shadow: none !important;
+                    min-height: 44px;
+                    border-radius: var(--mi-radius-md) !important;
+                    border-color: var(--mi-line) !important;
+                    background: var(--mi-surface) !important;
+                    box-shadow: none !important;
                   }
 
                   [data-baseweb="input"] > div:focus-within,
                   [data-baseweb="select"] > div:focus-within,
                   [data-baseweb="textarea"] > div:focus-within {
-                      border-color: rgba(255,105,0,0.75) !important;
-                      box-shadow: 0 0 0 3px rgba(255,105,0,0.08) !important;
+                    border-color: rgba(255,105,0,.72) !important;
+                    box-shadow: 0 0 0 3px rgba(255,105,0,.08) !important;
                   }
 
                   [data-testid="stFileUploader"] section {
-                      border: 1px dashed #d7d7d7;
-                      border-radius: var(--mi-radius-lg);
-                      background: rgba(255,255,255,0.68);
-                      padding: 18px;
+                    border: 1px dashed #d7d7d7;
+                    border-radius: var(--mi-radius-lg);
+                    background: rgba(255,255,255,.72);
+                    padding: 18px;
                   }
 
                   [data-testid="stAlert"] {
-                      border-radius: var(--mi-radius-md);
-                      border-width: 1px;
-                      box-shadow: none;
+                    border-radius: var(--mi-radius-md);
+                    border-width: 1px;
+                    box-shadow: none;
                   }
 
-                  [data-testid="stExpander"] {
-                      background: var(--mi-surface);
-                      border: 1px solid var(--mi-line) !important;
-                      border-radius: var(--mi-radius-lg) !important;
-                      overflow: hidden;
-                  }
-
-                  [data-testid="stDataFrame"] {
-                      border: 1px solid var(--mi-line);
-                      border-radius: var(--mi-radius-lg);
-                      overflow: hidden;
-                      background: var(--mi-surface);
+                  [data-testid="stExpander"],
+                  [data-testid="stForm"] {
+                    background: var(--mi-surface);
+                    border: 1px solid var(--mi-line) !important;
+                    border-radius: var(--mi-radius-lg) !important;
+                    box-shadow: none;
                   }
 
                   [data-testid="stForm"] {
-                      background: var(--mi-surface);
-                      border: 1px solid var(--mi-line);
-                      border-radius: var(--mi-radius-xl);
-                      padding: 20px;
+                    padding: 20px;
                   }
 
-                  hr {
-                      border-color: var(--mi-line) !important;
+                  [data-testid="stDataFrame"] {
+                    border: 1px solid var(--mi-line);
+                    border-radius: var(--mi-radius-lg);
+                    overflow: hidden;
+                    background: var(--mi-surface);
                   }
+
+                  [data-testid="stPlotlyChart"] {
+                    background: var(--mi-surface);
+                    border: 1px solid var(--mi-line);
+                    border-radius: var(--mi-radius-lg);
+                    padding: 8px;
+                  }
+
+                  hr { border-color: var(--mi-line) !important; }
 
                   a {
-                      color: var(--mi-text);
-                      text-decoration-color: rgba(255,105,0,0.55);
-                      text-underline-offset: 3px;
+                    color: var(--mi-text);
+                    text-decoration-color: rgba(255,105,0,.55);
+                    text-underline-offset: 3px;
                   }
 
                   @media (max-width: 900px) {
-                      .block-container {
-                          padding-top: 22px;
-                          padding-left: 18px;
-                          padding-right: 18px;
-                      }
-                      div[data-baseweb="tab-list"] {
-                          overflow-x: auto;
-                          flex-wrap: nowrap;
-                      }
-                      [data-testid="stMetric"] {
-                          min-height: 96px;
-                      }
+                    .block-container {
+                      padding-top: 22px;
+                      padding-left: 18px;
+                      padding-right: 18px;
+                    }
+                    div[data-baseweb="tab-list"] {
+                      overflow-x: auto;
+                      flex-wrap: nowrap;
+                    }
+                    [data-testid="stMetric"] { min-height: 96px; }
                   }
                   </style>
-                  """,
-                  unsafe_allow_html=True,
-              )
-
-
-          def render_product_header() -> None:
-              """Render a compact product header with a clear bilingual hierarchy."""
-              st.markdown(
-                  """
-                  <div class="mi-page-header">
-                    <div class="mi-page-eyebrow">CHANNEL GOVERNANCE / DECISION SUPPORT</div>
-                    <div class="mi-page-title">自适应渠道治理与合作伙伴评分</div>
-                    <div class="mi-page-subtitle">
-                      Adaptive Channel Governance &amp; Partner Scoring Platform ·
-                      Synthetic Data · Deterministic Rules · Human-in-the-loop
-                    </div>
-                  </div>
                   """,
                   unsafe_allow_html=True,
               )
@@ -354,17 +331,15 @@ jobs:
 
           ## Positioning
 
-          The presentation layer is **Xiaomi / HyperOS inspired**, not an official Xiaomi design system and not a brand imitation. The goal is to translate Xiaomi's public design principles — clear hierarchy, comfortable reading, restrained surfaces and fluid visual rhythm — into an enterprise decision-support dashboard.
+          The presentation layer is **Xiaomi / HyperOS inspired**, not an official Xiaomi design system and not a brand imitation. It translates public design principles — clear hierarchy, comfortable reading, restrained surfaces and visual rhythm — into an enterprise decision-support dashboard.
 
           No Xiaomi logo, trademark treatment, proprietary asset, or bundled font file is used.
 
           ## Typography
 
-          Font stack:
+          Font stack: `MiSans → Inter → SF Pro Display → Segoe UI → PingFang SC → Microsoft YaHei → Arial`.
 
-          `MiSans → Inter → SF Pro Display → Segoe UI → PingFang SC → Microsoft YaHei → Arial`
-
-          MiSans is used only when available on the viewer's system; the repository does not bundle font files.
+          MiSans is used only when already available on the viewer's system. The repository does not bundle font files.
 
           | Layer | Size | Weight | Use |
           |---|---:|---:|---|
@@ -378,36 +353,34 @@ jobs:
           ## Layout
 
           - Maximum content width: **1480 px**
-          - Desktop page side padding: **20–52 px responsive**
+          - Desktop side padding: **20–52 px responsive**
           - Top padding: **34 px**
           - Bottom padding: **64 px**
           - Primary spacing rhythm: **8 / 12 / 16 / 24 / 32 px**
-          - Avoid dense full-width text blocks; keep management information in short readable groups.
 
           ## Surfaces
 
-          - Application background: `#F7F7F7`
-          - Primary surface: `#FFFFFF`
-          - Soft selected surface: `#F2F2F2`
-          - Main text: `#191919`
-          - Secondary text: `#5F5F5F`
-          - Muted text: `#8A8A8A`
-          - Border: `#E8E8E8`
-          - Accent: `#FF6900`, used sparingly for focus and brand-like micro-accent only
+          - Background `#F7F7F7`
+          - Primary surface `#FFFFFF`
+          - Selected surface `#F2F2F2`
+          - Main text `#191919`
+          - Secondary text `#5F5F5F`
+          - Muted text `#8A8A8A`
+          - Border `#E8E8E8`
+          - Accent `#FF6900`, used sparingly
 
           ## Components
 
           - Cards: 16–20 px radius, thin border, almost no shadow
-          - Buttons: pill shape, 42 px minimum height; black primary button, white secondary button
-          - Inputs: 44 px minimum height, 12 px radius, orange focus ring
-          - Tabs: segmented white surface with subtle selected state, single-line bilingual labels
-          - Tables: white surface, thin border, 16 px radius
-          - Alerts: 12 px radius, no heavy shadow
-          - File upload: dashed neutral border and light surface
+          - Buttons: pill shape, 42 px minimum height
+          - Inputs: 44 px minimum height, 12 px radius, subtle orange focus ring
+          - Tabs: white segmented surface, light selected state, existing bilingual naming preserved
+          - Tables and charts: white surface, thin border, 16 px radius
+          - File uploader: dashed neutral border and light surface
 
           ## Guardrail
 
-          This file governs **presentation only**. It must not change scoring, policy resolution, risk, governance, target rationale, persistence, or AI decision boundaries.
+          This system governs **presentation only**. It does not change scoring, policy resolution, risk, governance, target rationale, persistence, or AI decision boundaries.
           MD
 
           python - <<'PY'
@@ -417,30 +390,18 @@ jobs:
           text = app.read_text(encoding='utf-8')
 
           import_anchor = 'from channel_governance.validation import require_valid_dataframe\n'
-          import_line = 'from channel_governance.ui_theme import apply_visual_theme, render_product_header\n'
+          import_line = 'from channel_governance.ui_theme import apply_visual_theme\n'
           if import_line not in text:
               if import_anchor not in text:
                   raise SystemExit('Could not find UI import anchor')
               text = text.replace(import_anchor, import_anchor + import_line, 1)
 
-          old_header = '''st.set_page_config(page_title="Adaptive Channel Governance", page_icon="◈", layout="wide")\nst.title("自适应渠道治理与合作伙伴评分 · Adaptive Channel Governance")\nst.caption("Synthetic Data · Deterministic Rules · 可解释的 Human-in-the-loop 决策支持")'''
-          new_header = '''st.set_page_config(page_title="Adaptive Channel Governance", page_icon="◈", layout="wide")\napply_visual_theme()\nrender_product_header()'''
-          if old_header not in text:
-              raise SystemExit('Could not find page header block')
-          text = text.replace(old_header, new_header, 1)
-
-          replacements = {
-              '"数据中心\\nData Center"': '"数据中心 · Data Center"',
-              '"渠道总览\\nChannel Overview"': '"渠道总览 · Channel Overview"',
-              '"合作伙伴全景分析\\nPartner 360"': '"合作伙伴全景 · Partner 360"',
-              '"策略配置中心\\nPolicy Studio"': '"策略配置 · Policy Studio"',
-              '"策略模拟实验室\\nScenario Lab"': '"策略模拟 · Scenario Lab"',
-              '"审计日志\\nAudit Log"': '"审计日志 · Audit Log"',
-          }
-          for old, new in replacements.items():
-              if old not in text:
-                  raise SystemExit(f'Missing tab label: {old}')
-              text = text.replace(old, new, 1)
+          config_line = 'st.set_page_config(page_title="Adaptive Channel Governance", page_icon="◈", layout="wide")\n'
+          themed = config_line + 'apply_visual_theme()\n'
+          if themed not in text:
+              if config_line not in text:
+                  raise SystemExit('Could not find set_page_config line')
+              text = text.replace(config_line, themed, 1)
 
           app.write_text(text, encoding='utf-8')
           PY
