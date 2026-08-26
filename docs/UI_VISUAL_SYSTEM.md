@@ -1,16 +1,24 @@
-# UI Visual System
+# Refined Enterprise UI System
 
 ## Positioning
 
-The presentation layer is **Xiaomi / HyperOS inspired**, not an official Xiaomi design system and not a brand imitation. It translates public design principles — clear hierarchy, comfortable reading, restrained surfaces and visual rhythm — into an enterprise decision-support dashboard.
+The presentation layer uses a **clean, restrained, enterprise-grade visual system** designed for decision-support software. The goal is to make dense governance information easier to scan without turning the interface into a consumer-style showcase.
 
-No Xiaomi logo, trademark treatment, proprietary asset, or bundled font file is used.
+The visual system prioritizes:
+
+- clear information hierarchy;
+- comfortable reading density;
+- generous but controlled whitespace;
+- restrained surfaces and borders;
+- consistent component sizing;
+- minimal accent color;
+- bilingual readability for Chinese and English labels.
+
+No third-party brand identity, logo, proprietary visual asset, or bundled font file is used.
 
 ## Typography
 
-Font stack: `MiSans → Inter → SF Pro Display → Segoe UI → PingFang SC → Microsoft YaHei → Arial`.
-
-MiSans is used only when already available on the viewer's system. The repository does not bundle font files.
+Font stack: `Inter → SF Pro Display → Segoe UI → PingFang SC → Microsoft YaHei → Arial`.
 
 | Layer | Size | Weight | Use |
 |---|---:|---:|---|
@@ -38,16 +46,25 @@ MiSans is used only when already available on the viewer's system. The repositor
 - Secondary text `#5F5F5F`
 - Muted text `#8A8A8A`
 - Border `#E8E8E8`
-- Accent `#FF6900`, used sparingly
+- Accent `#FF6900`, used sparingly for focus and hierarchy rather than decoration
 
 ## Components
 
 - Cards: 16–20 px radius, thin border, almost no shadow
 - Buttons: pill shape, 42 px minimum height
-- Inputs: 44 px minimum height, 12 px radius, subtle orange focus ring
-- Tabs: white segmented surface, light selected state, existing bilingual naming preserved
+- Inputs: 44 px minimum height, 12 px radius, subtle accent focus ring
+- Tabs: white segmented surface with a light selected state
 - Tables and charts: white surface, thin border, 16 px radius
 - File uploader: dashed neutral border and light surface
+- Empty states: explicit and informative rather than silently showing demo data
+
+## Product Rule
+
+Visual polish must not obscure system state. In particular, the interface should always make it clear whether the current analysis is based on:
+
+- no active dataset;
+- explicitly loaded synthetic demo data; or
+- validated user-uploaded data.
 
 ## Guardrail
 
